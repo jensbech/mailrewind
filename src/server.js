@@ -69,6 +69,12 @@ app.get('/api/stats', async (req, res) => {
   }
 });
 
+app.use(express.static('client/dist'));
+
+app.get('/', (req, res) => {
+  res.sendFile(__dirname + '/../client/dist/index.html');
+});
+
 startup().then(() => {
   app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
