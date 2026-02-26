@@ -1,0 +1,17 @@
+From sender@example.com  Mon Jan  1 00:00:00 2024
+From: sender@example.com
+To: recipient@example.com
+Subject: Test Email 1
+Date: Mon, 1 Jan 2024 12:00:00 +0000
+Message-ID: <msg1@example.com>
+
+This is a test email body.
+
+From another@example.com  Mon Jan  2 00:00:00 2024
+From: another@example.com
+To: recipient@example.com
+Subject: Test Email 2
+Date: Mon, 2 Jan 2024 13:00:00 +0000
+Message-ID: <msg2@example.com>
+
+Another test body.
