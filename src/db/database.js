@@ -54,15 +54,15 @@ export function getEmail(db, id) {
 
 export function searchEmails(db, query, limit = 50, offset = 0) {
   return new Promise((resolve, reject) => {
+    const searchPattern = `%${query}%`;
     const sql = `
-      SELECT e.* FROM emails e
-      JOIN emails_fts fts ON e.id = fts.rowid
-      WHERE fts MATCH ?
-      ORDER BY e.date DESC
+      SELECT * FROM emails
+      WHERE subject LIKE ? OR bodyText LIKE ? OR \`from\` LIKE ? OR \`to\` LIKE ?
+      ORDER BY date DESC
       LIMIT ? OFFSET ?
     `;
 
-    db.all(sql, [query, limit, offset], (err, rows) => {
+    db.all(sql, [searchPattern, searchPattern, searchPattern, searchPattern, limit, offset], (err, rows) => {
       if (err) reject(err);
       else resolve(rows || []);
     });
