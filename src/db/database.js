@@ -43,6 +43,30 @@ export function insertEmail(db, email) {
   });
 }
 
+export function insertBatch(db, emails) {
+  return new Promise((resolve, reject) => {
+    const sql = `
+      INSERT OR IGNORE INTO emails
+      (\`messageId\`, \`from\`, \`to\`, cc, bcc, subject, date, bodyText, bodyHTML, headers)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+    db.serialize(() => {
+      db.run('BEGIN');
+      let inserted = 0;
+      for (const email of emails) {
+        db.run(sql, [
+          email.messageId, email.from, email.to, email.cc, email.bcc,
+          email.subject, email.date, email.body, email.bodyHTML, email.headers
+        ], function(err) { if (!err && this.changes > 0) inserted++; });
+      }
+      db.run('COMMIT', (err) => {
+        if (err) reject(err);
+        else resolve(inserted);
+      });
+    });
+  });
+}
+
 export function getEmail(db, id) {
   return new Promise((resolve, reject) => {
     db.get('SELECT * FROM emails WHERE id = ?', [id], (err, row) => {
