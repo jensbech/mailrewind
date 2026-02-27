@@ -1,5 +1,7 @@
 node_modules/
-data/*.db
+data/
+Mail/
+*.log
 .env
 .DS_Store
 client/node_modules/
