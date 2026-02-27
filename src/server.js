@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import { resolve } from 'path';
-import { initializeDatabase, getEmails, searchEmails, getEmail, getStats } from './db/database.js';
+import { initializeDatabase, getEmails, searchEmails, getEmail, getStats, getYearCounts } from './db/database.js';
 import { indexEmails, isIndexed, clearEmails } from './services/indexService.js';
 import { getAttachmentsForEmail, getAttachment } from './db/attachments.js';
 
@@ -33,11 +33,22 @@ async function startup() {
   console.log(`Ready! ${indexedCount} emails indexed`);
 }
 
+app.get('/api/years', async (req, res) => {
+  try {
+    const counts = await getYearCounts(db);
+    res.json(counts);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/emails', async (req, res) => {
   try {
     const limit = parseInt(req.query.limit || '50');
     const offset = parseInt(req.query.offset || '0');
-    const emails = await getEmails(db, limit, offset);
+    const year = req.query.year || null;
+    const sort = req.query.sort === 'asc' ? 'asc' : 'desc';
+    const emails = await getEmails(db, limit, offset, year, sort);
     res.json(emails);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -56,10 +67,9 @@ app.get('/api/emails/:id', async (req, res) => {
 
 app.get('/api/search', async (req, res) => {
   try {
-    const { q, limit = '50', offset = '0' } = req.query;
+    const { q, limit = '50', offset = '0', year, sort } = req.query;
     if (!q) return res.status(400).json({ error: 'Query required' });
-
-    const results = await searchEmails(db, q, parseInt(limit), parseInt(offset));
+    const results = await searchEmails(db, q, parseInt(limit), parseInt(offset), year || null, sort === 'asc' ? 'asc' : 'desc');
     res.json(results);
   } catch (err) {
     res.status(500).json({ error: err.message });

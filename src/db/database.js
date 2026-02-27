@@ -76,30 +76,61 @@ export function getEmail(db, id) {
   });
 }
 
-export function searchEmails(db, query, limit = 50, offset = 0) {
+export function searchEmails(db, query, limit = 50, offset = 0, year = null, sort = 'desc') {
   return new Promise((resolve, reject) => {
+    const order = sort === 'asc' ? 'ASC' : 'DESC';
     const searchPattern = `%${query}%`;
-    const sql = `
-      SELECT * FROM emails
-      WHERE subject LIKE ? OR bodyText LIKE ? OR \`from\` LIKE ? OR \`to\` LIKE ?
-      ORDER BY date DESC
-      LIMIT ? OFFSET ?
-    `;
+    const params = [searchPattern, searchPattern, searchPattern, searchPattern];
+    let sql = `SELECT * FROM emails WHERE (subject LIKE ? OR bodyText LIKE ? OR \`from\` LIKE ? OR \`to\` LIKE ?)`;
 
-    db.all(sql, [searchPattern, searchPattern, searchPattern, searchPattern, limit, offset], (err, rows) => {
+    if (year) {
+      const start = new Date(`${year}-01-01`).getTime();
+      const end = new Date(`${Number(year) + 1}-01-01`).getTime();
+      sql += ' AND date >= ? AND date < ?';
+      params.push(start, end);
+    }
+
+    sql += ` ORDER BY date ${order} LIMIT ? OFFSET ?`;
+    params.push(limit, offset);
+
+    db.all(sql, params, (err, rows) => {
       if (err) reject(err);
       else resolve(rows || []);
     });
   });
 }
 
-export function getEmails(db, limit = 50, offset = 0) {
+export function getEmails(db, limit = 50, offset = 0, year = null, sort = 'desc') {
   return new Promise((resolve, reject) => {
-    const sql = 'SELECT * FROM emails ORDER BY date DESC LIMIT ? OFFSET ?';
-    db.all(sql, [limit, offset], (err, rows) => {
+    const order = sort === 'asc' ? 'ASC' : 'DESC';
+    const params = [];
+    let sql = 'SELECT * FROM emails';
+
+    if (year) {
+      const start = new Date(`${year}-01-01`).getTime();
+      const end = new Date(`${Number(year) + 1}-01-01`).getTime();
+      sql += ' WHERE date >= ? AND date < ?';
+      params.push(start, end);
+    }
+
+    sql += ` ORDER BY date ${order} LIMIT ? OFFSET ?`;
+    params.push(limit, offset);
+
+    db.all(sql, params, (err, rows) => {
       if (err) reject(err);
       else resolve(rows || []);
     });
+  });
+}
+
+export function getYearCounts(db) {
+  return new Promise((resolve, reject) => {
+    db.all(
+      `SELECT strftime('%Y', date/1000, 'unixepoch') as year, COUNT(*) as count
+       FROM emails WHERE date IS NOT NULL
+       GROUP BY year ORDER BY year DESC`,
+      (err, rows) => err ? reject(err) : resolve(rows || [])
+    );
   });
 }
 
