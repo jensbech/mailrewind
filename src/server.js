@@ -1,10 +1,12 @@
 import express from 'express';
 import cors from 'cors';
+import { resolve } from 'path';
 import { initializeDatabase, getEmails, searchEmails, getEmail, getStats } from './db/database.js';
-import { indexEmails, isIndexed } from './services/indexService.js';
+import { indexEmails, isIndexed, clearEmails } from './services/indexService.js';
+import { getAttachmentsForEmail, getAttachment } from './db/attachments.js';
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json());
@@ -15,9 +17,13 @@ let indexedCount = 0;
 async function startup() {
   db = await initializeDatabase();
 
-  const indexed = await isIndexed(db);
-  if (!indexed) {
-    const mboxPath = '/Users/home/Downloads/Takeout/Mail/All mail Including Spam and Trash.mbox';
+  const mboxPath = '/Users/home/Downloads/Takeout/Mail/All mail Including Spam and Trash.mbox';
+  const alreadyIndexed = await isIndexed(db);
+  if (!alreadyIndexed || process.env.REINDEX === 'true') {
+    if (alreadyIndexed) {
+      console.log('REINDEX=true: clearing existing index...');
+      await clearEmails(db);
+    }
     indexedCount = await indexEmails(db, mboxPath);
   } else {
     const stats = await getStats(db);
@@ -64,6 +70,27 @@ app.get('/api/stats', async (req, res) => {
   try {
     const stats = await getStats(db);
     res.json(stats);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/emails/:id/attachments', async (req, res) => {
+  try {
+    const attachments = await getAttachmentsForEmail(db, req.params.id);
+    res.json(attachments);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/attachments/:id/download', async (req, res) => {
+  try {
+    const att = await getAttachment(db, req.params.id);
+    if (!att) return res.status(404).json({ error: 'Not found' });
+    res.setHeader('Content-Type', att.contentType || 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="${att.filename}"`);
+    res.sendFile(resolve(att.path));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
