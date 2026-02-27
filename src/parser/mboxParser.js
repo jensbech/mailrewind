@@ -16,9 +16,13 @@ function parseEnvelopeDate(fromLine) {
 }
 
 export async function parseEmailString(raw, envelopeDate = null) {
+  const parseStart = Date.now();
   try {
     const parsed = await simpleParser(raw);
     if (!parsed.from?.text && !parsed.subject) return null;
+    const parsedMs = parsed.date?.getTime();
+    const isNowFallback = parsedMs && Math.abs(parsedMs - parseStart) < 60000;
+    const date = (isNowFallback ? null : parsed.date) || envelopeDate || null;
     return {
       messageId: parsed.messageId || '',
       from: parsed.from?.text || '',
@@ -26,7 +30,7 @@ export async function parseEmailString(raw, envelopeDate = null) {
       cc: parsed.cc?.text || '',
       bcc: parsed.bcc?.text || '',
       subject: parsed.subject || '(no subject)',
-      date: parsed.date || envelopeDate || null,
+      date,
       body: parsed.text || '',
       bodyHTML: parsed.html || '',
       headers: JSON.stringify(Array.from(parsed.headers.entries())),
