@@ -36,4 +36,16 @@ CREATE TRIGGER IF NOT EXISTS emails_ad AFTER DELETE ON emails BEGIN
   INSERT INTO emails_fts(emails_fts, rowid, subject, bodyText, \`from\`, \`to\`)
   VALUES('delete', old.id, old.subject, old.bodyText, old.\`from\`, old.\`to\`);
 END;
+
+CREATE TABLE IF NOT EXISTS attachments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  emailId INTEGER NOT NULL REFERENCES emails(id) ON DELETE CASCADE,
+  filename TEXT NOT NULL,
+  contentType TEXT,
+  size INTEGER,
+  path TEXT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_attachment_email ON attachments(emailId);
 `;
