@@ -1,9 +1,13 @@
 import express from 'express';
 import cors from 'cors';
-import { resolve } from 'path';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { initializeDatabase, getEmails, searchEmails, getEmail, getStats, getYearCounts } from './db/database.js';
 import { indexEmails, isIndexed, clearEmails } from './services/indexService.js';
 import { getAttachmentsForEmail, getAttachment } from './db/attachments.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -106,10 +110,10 @@ app.get('/api/attachments/:id/download', async (req, res) => {
   }
 });
 
-app.use(express.static('client/dist'));
+app.use(express.static(resolve(__dirname, '../client/dist')));
 
-app.get('/', (req, res) => {
-  res.sendFile(__dirname + '/../client/dist/index.html');
+app.get('*', (req, res) => {
+  res.sendFile(resolve(__dirname, '../client/dist/index.html'));
 });
 
 startup().then(() => {
