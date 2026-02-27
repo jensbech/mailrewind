@@ -1,27 +1,26 @@
 :root {
-  --bg-0: #0d0c0b;
-  --bg-1: #131210;
-  --bg-2: #1a1815;
-  --bg-3: #232018;
-  --bg-hover: #2a261f;
-  --bg-selected: #2e2920;
+  --bg-0: #f4f2ee;
+  --bg-1: #ffffff;
+  --bg-2: #f9f8f5;
+  --bg-3: #f0ede6;
+  --bg-hover: #f6f5f1;
+  --bg-selected: #fef8ef;
 
-  --border: #272420;
-  --border-subtle: #1c1a17;
+  --border: #e2dfd7;
+  --border-subtle: #eceae4;
 
-  --text-0: #dfd6ca;
-  --text-1: #9c9285;
-  --text-2: #625d57;
-  --text-3: #3a3732;
+  --text-0: #1c1a17;
+  --text-1: #4a4640;
+  --text-2: #7c7870;
+  --text-3: #aaa69d;
 
-  --accent: #c8953f;
-  --accent-hover: #dba84f;
-  --accent-dim: rgba(200, 149, 63, 0.13);
-  --accent-dim2: rgba(200, 149, 63, 0.06);
+  --accent: #b45309;
+  --accent-hover: #92400e;
+  --accent-dim: rgba(180, 83, 9, 0.12);
+  --accent-dim2: rgba(180, 83, 9, 0.06);
 
-  --font-display: 'Cormorant SC', Georgia, serif;
-  --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
-  --font-serif: 'Lora', Georgia, serif;
+  --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
 * {
@@ -37,7 +36,7 @@ html, body, #root {
 }
 
 body {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -52,13 +51,13 @@ body {
 /* ── Sidebar ──────────────────────────────────────────── */
 
 .sidebar {
-  width: 370px;
-  min-width: 370px;
   background: var(--bg-1);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative;
+  flex-shrink: 0;
 }
 
 .sidebar-head {
@@ -67,10 +66,10 @@ body {
 }
 
 .sidebar-logo {
-  font-family: var(--font-display);
-  font-size: 22px;
+  font-family: var(--font-sans);
+  font-size: 14px;
   font-weight: 600;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.01em;
   color: var(--text-0);
   display: flex;
   align-items: center;
@@ -84,10 +83,10 @@ body {
 }
 
 .sidebar-meta {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 11px;
-  color: var(--text-2);
-  letter-spacing: 0.03em;
+  color: var(--text-3);
+  letter-spacing: 0.01em;
 }
 
 /* ── Filters panel ────────────────────────────────────── */
@@ -110,7 +109,7 @@ body {
   left: 11px;
   top: 50%;
   transform: translateY(-50%);
-  color: var(--text-2);
+  color: var(--text-3);
   pointer-events: none;
   transition: color 0.2s;
 }
@@ -124,11 +123,11 @@ body {
   background: var(--bg-2);
   border: 1px solid var(--border);
   color: var(--text-0);
-  font-family: var(--font-mono);
-  font-size: 12.5px;
+  font-family: var(--font-sans);
+  font-size: 13px;
   padding: 9px 12px 9px 34px;
   outline: none;
-  border-radius: 3px;
+  border-radius: 6px;
   transition: border-color 0.2s, background 0.2s;
 }
 
@@ -138,7 +137,8 @@ body {
 
 .search-input:focus {
   border-color: var(--accent);
-  background: var(--bg-3);
+  background: var(--bg-1);
+  box-shadow: 0 0 0 3px var(--accent-dim2);
 }
 
 .filter-section {
@@ -148,10 +148,10 @@ body {
 }
 
 .filter-label {
-  font-family: var(--font-mono);
-  font-size: 9.5px;
-  font-weight: 500;
-  letter-spacing: 0.12em;
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--text-3);
 }
@@ -163,16 +163,17 @@ body {
 }
 
 .chip {
-  font-family: var(--font-mono);
-  font-size: 11px;
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  font-weight: 500;
   padding: 3px 9px;
-  border-radius: 2px;
+  border-radius: 4px;
   border: 1px solid var(--border);
   background: var(--bg-2);
   color: var(--text-2);
   cursor: pointer;
   transition: all 0.15s;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
   user-select: none;
 }
 
@@ -195,16 +196,17 @@ body {
 
 .sort-btn {
   flex: 1;
-  font-family: var(--font-mono);
-  font-size: 11px;
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  font-weight: 500;
   padding: 5px 8px;
-  border-radius: 2px;
+  border-radius: 4px;
   border: 1px solid var(--border);
   background: var(--bg-2);
   color: var(--text-2);
   cursor: pointer;
   transition: all 0.15s;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.01em;
   text-align: center;
   user-select: none;
 }
@@ -232,15 +234,15 @@ body {
 }
 
 .result-count {
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  color: var(--text-2);
-  letter-spacing: 0.04em;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  color: var(--text-3);
+  letter-spacing: 0.01em;
 }
 
 .result-count strong {
   color: var(--text-1);
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .loading-dot {
@@ -279,7 +281,7 @@ body {
 }
 
 .email-item {
-  padding: 13px 24px;
+  padding: 12px 24px;
   border-bottom: 1px solid var(--border-subtle);
   cursor: pointer;
   transition: background 0.12s;
@@ -317,14 +319,15 @@ body {
   font-family: var(--font-mono);
   font-size: 10px;
   color: var(--accent);
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
   margin-bottom: 4px;
-  opacity: 0.85;
+  opacity: 0.8;
 }
 
 .item-subject {
-  font-family: var(--font-serif);
+  font-family: var(--font-sans);
   font-size: 13.5px;
+  font-weight: 500;
   color: var(--text-0);
   white-space: nowrap;
   overflow: hidden;
@@ -350,16 +353,16 @@ body {
 
 .load-more-btn {
   width: 100%;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
   padding: 8px;
   background: transparent;
   border: 1px solid var(--border);
   color: var(--text-2);
   cursor: pointer;
-  border-radius: 2px;
+  border-radius: 6px;
   transition: all 0.15s;
 }
 
@@ -386,10 +389,29 @@ body {
 }
 
 .empty-list p {
-  font-family: var(--font-mono);
-  font-size: 12px;
+  font-family: var(--font-sans);
+  font-size: 13px;
   color: var(--text-2);
   line-height: 1.6;
+}
+
+/* ── Resize handle ────────────────────────────────────── */
+
+.resize-handle {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 10;
+  transition: background 0.15s;
+}
+
+.resize-handle:hover,
+.resize-handle:active {
+  background: var(--accent);
+  opacity: 0.25;
 }
 
 /* ── Main content ─────────────────────────────────────── */
@@ -413,21 +435,18 @@ body {
 }
 
 .empty-state-glyph {
-  font-family: var(--font-display);
-  font-size: 56px;
-  font-weight: 500;
+  font-size: 36px;
   color: var(--text-3);
   line-height: 1;
-  letter-spacing: 0.04em;
-  opacity: 0.4;
+  opacity: 0.35;
 }
 
 .empty-state p {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.08em;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--text-2);
+  color: var(--text-3);
 }
 
 /* ── Email detail ─────────────────────────────────────── */
@@ -453,13 +472,13 @@ body {
 }
 
 .detail-subject {
-  font-family: var(--font-display);
-  font-size: 26px;
-  font-weight: 500;
+  font-family: var(--font-sans);
+  font-size: 22px;
+  font-weight: 600;
   color: var(--text-0);
-  line-height: 1.25;
+  line-height: 1.3;
   margin-bottom: 20px;
-  letter-spacing: 0.01em;
+  letter-spacing: -0.01em;
 }
 
 .detail-meta {
@@ -470,10 +489,10 @@ body {
 }
 
 .meta-label {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 9.5px;
-  font-weight: 500;
-  letter-spacing: 0.14em;
+  font-weight: 600;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--text-3);
   padding-top: 1px;
@@ -511,11 +530,12 @@ body {
   padding: 5px 12px 5px 9px;
   background: var(--bg-1);
   border: 1px solid var(--border);
-  border-radius: 2px;
+  border-radius: 6px;
   text-decoration: none;
   color: var(--text-1);
-  font-family: var(--font-mono);
-  font-size: 11px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 500;
   transition: all 0.15s;
   letter-spacing: 0.01em;
 }
@@ -569,7 +589,7 @@ body {
 }
 
 .body-html {
-  font-family: var(--font-serif);
+  font-family: var(--font-sans);
   font-size: 14px;
   line-height: 1.75;
   color: var(--text-0);

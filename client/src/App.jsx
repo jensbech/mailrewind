@@ -28,11 +28,42 @@ export default function App() {
   const [sort, setSort] = useState('desc');
   const [stats, setStats] = useState(null);
   const [years, setYears] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [total, setTotal] = useState(null);
+  const [sidebarWidth, setSidebarWidth] = useState(370);
   const listRef = useRef(null);
+  const dragRef = useRef({ active: false, startX: 0, startWidth: 0 });
+
+  const onResizeStart = useCallback((e) => {
+    e.preventDefault();
+    dragRef.current = { active: true, startX: e.clientX, startWidth: sidebarWidth };
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'col-resize';
+  }, [sidebarWidth]);
+
+  useEffect(() => {
+    const onMove = (e) => {
+      if (!dragRef.current.active) return;
+      const dx = e.clientX - dragRef.current.startX;
+      const newW = Math.min(560, Math.max(240, dragRef.current.startWidth + dx));
+      setSidebarWidth(newW);
+    };
+    const onUp = () => {
+      if (dragRef.current.active) {
+        dragRef.current.active = false;
+        document.body.style.userSelect = '';
+        document.body.style.cursor = '';
+      }
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, []);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 320);
@@ -94,19 +125,17 @@ export default function App() {
 
   return (
     <div className="app">
-      <aside className="sidebar">
+      <aside className="sidebar" style={{ width: sidebarWidth }}>
         <div className="sidebar-head">
           <div className="sidebar-logo">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <rect x="2" y="4" width="20" height="16" rx="2"/>
               <path d="m2 7 10 7 10-7"/>
             </svg>
-            Letters
+            {stats ? stats.total.toLocaleString() + ' emails' : 'Email Archive'}
           </div>
-          {stats && (
-            <div className="sidebar-meta">
-              {stats.total.toLocaleString()} archived · {yearRange}
-            </div>
+          {stats && yearRange && (
+            <div className="sidebar-meta">{yearRange}</div>
           )}
         </div>
 
@@ -168,6 +197,7 @@ export default function App() {
           {loading && <div className="loading-dot" />}
         </div>
 
+        <div className="resize-handle" onMouseDown={onResizeStart} />
         <div className="email-list" ref={listRef}>
           {emails.length === 0 && !loading ? (
             <div className="empty-list">
