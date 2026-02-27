@@ -140,7 +140,7 @@ body {
   overflow: hidden;
 }
 
-.email-detail .header {
+.email-detail .email-header {
   padding: 30px;
   border-bottom: 1px solid #e0e0e0;
   background: #fafafa;
@@ -180,4 +180,61 @@ body {
   color: #999;
   padding: 20px;
   font-size: 14px;
+}
+
+.attachments {
+  padding: 15px 30px;
+  border-bottom: 1px solid #e0e0e0;
+  background: #fffbf0;
+}
+
+.attachments h3 {
+  font-size: 13px;
+  font-weight: 600;
+  color: #555;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.attachment-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.attachment-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  text-decoration: none;
+  color: #333;
+  font-size: 13px;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.attachment-item:hover {
+  background: #e8f0fe;
+  border-color: #1a73e8;
+}
+
+.attachment-icon {
+  font-size: 16px;
+}
+
+.attachment-name {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attachment-size {
+  color: #999;
+  font-size: 11px;
+  flex-shrink: 0;
 }
