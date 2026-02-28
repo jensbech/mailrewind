@@ -1071,7 +1071,7 @@ body {
   align-items: center;
   justify-content: center;
   opacity: 0;
-  transition: opacity 0.15s;
+  transition: opacity 0.15s, color 0.15s, border-color 0.15s;
   padding: 0;
 }
 
@@ -1109,6 +1109,7 @@ body {
   background: var(--bg-2);
   color: var(--text-2);
   cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
 }
 
 .mailbox-chip-confirm-btn:hover {
