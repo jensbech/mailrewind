@@ -1,4 +1,7 @@
-export default function MailboxBar({ mailboxes, selectedIds, onSelectionChange, onAddClick }) {
+import { useState } from 'react';
+
+export default function MailboxBar({ mailboxes, selectedIds, onSelectionChange, onAddClick, onDeleteMailbox }) {
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const allSelected = selectedIds === null;
 
   function toggleAll() {
@@ -38,15 +41,37 @@ export default function MailboxBar({ mailboxes, selectedIds, onSelectionChange, 
         </button>
 
         {mailboxes.map(m => (
-          <button
-            key={m.id}
-            className={`mailbox-chip${isActive(m.id) ? ' active' : ''}`}
-            onClick={() => toggleMailbox(m.id)}
-            title={`${m.count?.toLocaleString() ?? 0} emails`}
-          >
-            {m.name}
-            {m.count > 0 && <span className="mailbox-chip-count">{m.count.toLocaleString()}</span>}
-          </button>
+          <div key={m.id} className="mailbox-chip-wrap">
+            {confirmDeleteId === m.id ? (
+              <div className="mailbox-chip-confirm">
+                <span className="mailbox-chip-confirm-label">Delete «{m.name}»?</span>
+                <button
+                  className="mailbox-chip-confirm-btn mailbox-chip-confirm-btn--yes"
+                  onClick={() => { onDeleteMailbox(m.id); setConfirmDeleteId(null); }}
+                >Yes</button>
+                <button
+                  className="mailbox-chip-confirm-btn"
+                  onClick={() => setConfirmDeleteId(null)}
+                >No</button>
+              </div>
+            ) : (
+              <>
+                <button
+                  className={`mailbox-chip${isActive(m.id) ? ' active' : ''}`}
+                  onClick={() => toggleMailbox(m.id)}
+                  title={`${m.count?.toLocaleString() ?? 0} emails`}
+                >
+                  {m.name}
+                  {m.count > 0 && <span className="mailbox-chip-count">{m.count.toLocaleString()}</span>}
+                </button>
+                <button
+                  className="mailbox-chip-delete"
+                  onClick={() => setConfirmDeleteId(m.id)}
+                  title="Delete mailbox"
+                >×</button>
+              </>
+            )}
+          </div>
         ))}
       </div>
 
