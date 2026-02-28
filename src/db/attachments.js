@@ -49,11 +49,11 @@ export function getAttachment(db, id) {
   });
 }
 
-export function getEmailIdByMessageId(db, messageId) {
+export function getEmailIdByMessageId(db, messageId, mailboxId) {
   return new Promise((resolve, reject) => {
     db.get(
-      `SELECT id FROM emails WHERE messageId = ?`,
-      [messageId],
+      `SELECT id FROM emails WHERE messageId = ? AND mailbox_id = ?`,
+      [messageId, mailboxId],
       (err, row) => err ? reject(err) : resolve(row?.id ?? null)
     );
   });

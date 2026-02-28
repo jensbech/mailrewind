@@ -41,52 +41,55 @@ export async function initializeDatabase(dbPath = 'data/emails.db') {
   });
 }
 
-export function insertEmail(db, email) {
+export function createMailbox(db, name) {
   return new Promise((resolve, reject) => {
-    const sql = `
-      INSERT OR IGNORE INTO emails
-      (messageId, \`from\`, \`to\`, cc, bcc, subject, date, bodyText, bodyHTML, headers)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
-
-    db.run(sql, [
-      email.messageId,
-      email.from,
-      email.to,
-      email.cc,
-      email.bcc,
-      email.subject,
-      email.date,
-      email.body,
-      email.bodyHTML,
-      email.headers
-    ], function(err) {
-      if (err) reject(err);
-      else resolve(this.lastID);
-    });
+    db.run(
+      'INSERT INTO mailboxes (name) VALUES (?)',
+      [name],
+      function(err) { err ? reject(err) : resolve({ id: this.lastID, name }); }
+    );
   });
 }
 
-export function insertBatch(db, emails) {
+export function getMailboxes(db) {
+  return new Promise((resolve, reject) => {
+    db.all(
+      `SELECT m.id, m.name, m.created_at,
+              COUNT(e.id) as count,
+              MIN(e.date) as oldest,
+              MAX(e.date) as newest
+       FROM mailboxes m
+       LEFT JOIN emails e ON e.mailbox_id = m.id
+       GROUP BY m.id
+       ORDER BY m.created_at ASC`,
+      (err, rows) => err ? reject(err) : resolve(rows || [])
+    );
+  });
+}
+
+export function deleteMailbox(db, id) {
+  return new Promise((resolve, reject) => {
+    db.run('DELETE FROM mailboxes WHERE id = ?', [id], err => err ? reject(err) : resolve());
+  });
+}
+
+export function insertBatch(db, emails, mailboxId) {
   return new Promise((resolve, reject) => {
     const sql = `
       INSERT OR IGNORE INTO emails
-      (\`messageId\`, \`from\`, \`to\`, cc, bcc, subject, date, bodyText, bodyHTML, headers)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (\`messageId\`, mailbox_id, \`from\`, \`to\`, cc, bcc, subject, date, bodyText, bodyHTML, headers)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
     db.serialize(() => {
       db.run('BEGIN');
       let inserted = 0;
       for (const email of emails) {
         db.run(sql, [
-          email.messageId, email.from, email.to, email.cc, email.bcc,
+          email.messageId, mailboxId, email.from, email.to, email.cc, email.bcc,
           email.subject, email.date, email.body, email.bodyHTML, email.headers
         ], function(err) { if (!err && this.changes > 0) inserted++; });
       }
-      db.run('COMMIT', (err) => {
-        if (err) reject(err);
-        else resolve(inserted);
-      });
+      db.run('COMMIT', (err) => err ? reject(err) : resolve(inserted));
     });
   });
 }
@@ -100,72 +103,90 @@ export function getEmail(db, id) {
   });
 }
 
-export function searchEmails(db, query, limit = 50, offset = 0, year = null, sort = 'desc') {
+export function getEmails(db, limit = 50, offset = 0, year = null, sort = 'desc', mailboxIds = null) {
+  return new Promise((resolve, reject) => {
+    const order = sort === 'asc' ? 'ASC' : 'DESC';
+    const params = [];
+    const conditions = [];
+
+    if (mailboxIds && mailboxIds.length > 0) {
+      conditions.push(`mailbox_id IN (${mailboxIds.map(() => '?').join(',')})`);
+      params.push(...mailboxIds);
+    }
+    if (year) {
+      const start = new Date(`${year}-01-01`).getTime();
+      const end = new Date(`${Number(year) + 1}-01-01`).getTime();
+      conditions.push('date >= ? AND date < ?');
+      params.push(start, end);
+    }
+
+    let sql = 'SELECT * FROM emails';
+    if (conditions.length) sql += ' WHERE ' + conditions.join(' AND ');
+    sql += ` ORDER BY date ${order} LIMIT ? OFFSET ?`;
+    params.push(limit, offset);
+
+    db.all(sql, params, (err, rows) => err ? reject(err) : resolve(rows || []));
+  });
+}
+
+export function searchEmails(db, query, limit = 50, offset = 0, year = null, sort = 'desc', mailboxIds = null) {
   return new Promise((resolve, reject) => {
     const order = sort === 'asc' ? 'ASC' : 'DESC';
     const searchPattern = `%${query}%`;
     const params = [searchPattern, searchPattern, searchPattern, searchPattern];
-    let sql = `SELECT * FROM emails WHERE (subject LIKE ? OR bodyText LIKE ? OR \`from\` LIKE ? OR \`to\` LIKE ?)`;
+    const conditions = [
+      `(subject LIKE ? OR bodyText LIKE ? OR \`from\` LIKE ? OR \`to\` LIKE ?)`
+    ];
 
+    if (mailboxIds && mailboxIds.length > 0) {
+      conditions.push(`mailbox_id IN (${mailboxIds.map(() => '?').join(',')})`);
+      params.push(...mailboxIds);
+    }
     if (year) {
       const start = new Date(`${year}-01-01`).getTime();
       const end = new Date(`${Number(year) + 1}-01-01`).getTime();
-      sql += ' AND date >= ? AND date < ?';
+      conditions.push('date >= ? AND date < ?');
       params.push(start, end);
     }
 
+    let sql = 'SELECT * FROM emails WHERE ' + conditions.join(' AND ');
     sql += ` ORDER BY date ${order} LIMIT ? OFFSET ?`;
     params.push(limit, offset);
 
-    db.all(sql, params, (err, rows) => {
-      if (err) reject(err);
-      else resolve(rows || []);
-    });
+    db.all(sql, params, (err, rows) => err ? reject(err) : resolve(rows || []));
   });
 }
 
-export function getEmails(db, limit = 50, offset = 0, year = null, sort = 'desc') {
+export function getYearCounts(db, mailboxIds = null) {
   return new Promise((resolve, reject) => {
-    const order = sort === 'asc' ? 'ASC' : 'DESC';
     const params = [];
-    let sql = 'SELECT * FROM emails';
-
-    if (year) {
-      const start = new Date(`${year}-01-01`).getTime();
-      const end = new Date(`${Number(year) + 1}-01-01`).getTime();
-      sql += ' WHERE date >= ? AND date < ?';
-      params.push(start, end);
+    let where = 'WHERE date IS NOT NULL';
+    if (mailboxIds && mailboxIds.length > 0) {
+      where += ` AND mailbox_id IN (${mailboxIds.map(() => '?').join(',')})`;
+      params.push(...mailboxIds);
     }
-
-    sql += ` ORDER BY date ${order} LIMIT ? OFFSET ?`;
-    params.push(limit, offset);
-
-    db.all(sql, params, (err, rows) => {
-      if (err) reject(err);
-      else resolve(rows || []);
-    });
-  });
-}
-
-export function getYearCounts(db) {
-  return new Promise((resolve, reject) => {
     db.all(
       `SELECT strftime('%Y', date/1000, 'unixepoch') as year, COUNT(*) as count
-       FROM emails WHERE date IS NOT NULL
+       FROM emails ${where}
        GROUP BY year ORDER BY year DESC`,
+      params,
       (err, rows) => err ? reject(err) : resolve(rows || [])
     );
   });
 }
 
-export function getStats(db) {
+export function getStats(db, mailboxIds = null) {
   return new Promise((resolve, reject) => {
+    const params = [];
+    let where = '';
+    if (mailboxIds && mailboxIds.length > 0) {
+      where = `WHERE mailbox_id IN (${mailboxIds.map(() => '?').join(',')})`;
+      params.push(...mailboxIds);
+    }
     db.get(
-      `SELECT COUNT(*) as total, MIN(date) as oldest, MAX(date) as newest FROM emails`,
-      (err, row) => {
-        if (err) reject(err);
-        else resolve(row);
-      }
+      `SELECT COUNT(*) as total, MIN(date) as oldest, MAX(date) as newest FROM emails ${where}`,
+      params,
+      (err, row) => err ? reject(err) : resolve(row)
     );
   });
 }
