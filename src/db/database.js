@@ -30,7 +30,10 @@ export async function initializeDatabase(dbPath = 'data/emails.db') {
           console.log('DB migrated to multi-mailbox schema (existing data cleared — please re-import)');
         }
 
-        db.exec(schema, (e) => e ? reject(e) : resolve(db));
+        db.exec(schema, (e) => {
+          if (e) return reject(e);
+          db.run('PRAGMA foreign_keys = ON', (e2) => e2 ? reject(e2) : resolve(db));
+        });
       } catch (e) {
         reject(e);
       }
