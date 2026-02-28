@@ -6,13 +6,34 @@ export async function initializeDatabase(dbPath = 'data/emails.db') {
   await mkdir('data', { recursive: true });
 
   return new Promise((resolve, reject) => {
-    const db = new sqlite3.Database(dbPath, (err) => {
+    const db = new sqlite3.Database(dbPath, async (err) => {
       if (err) return reject(err);
 
-      db.exec(schema, (err) => {
-        if (err) return reject(err);
-        resolve(db);
-      });
+      try {
+        const needsMigration = await new Promise((res, rej) => {
+          db.get(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='mailboxes'",
+            (e, row) => e ? rej(e) : res(!row)
+          );
+        });
+
+        if (needsMigration) {
+          await new Promise((res, rej) => {
+            db.exec(`
+              DROP TABLE IF EXISTS emails_fts;
+              DROP TRIGGER IF EXISTS emails_ai;
+              DROP TRIGGER IF EXISTS emails_ad;
+              DROP TABLE IF EXISTS attachments;
+              DROP TABLE IF EXISTS emails;
+            `, e => e ? rej(e) : res());
+          });
+          console.log('DB migrated to multi-mailbox schema (existing data cleared — please re-import)');
+        }
+
+        db.exec(schema, (e) => e ? reject(e) : resolve(db));
+      } catch (e) {
+        reject(e);
+      }
     });
   });
 }

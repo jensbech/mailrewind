@@ -1,7 +1,14 @@
 export const schema = `
+CREATE TABLE IF NOT EXISTS mailboxes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS emails (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  messageId TEXT UNIQUE NOT NULL,
+  messageId TEXT NOT NULL,
+  mailbox_id INTEGER NOT NULL REFERENCES mailboxes(id) ON DELETE CASCADE,
   \`from\` TEXT,
   \`to\` TEXT,
   cc TEXT,
@@ -11,12 +18,14 @@ CREATE TABLE IF NOT EXISTS emails (
   bodyText TEXT,
   bodyHTML TEXT,
   headers TEXT,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(messageId, mailbox_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_email_date ON emails(date);
 CREATE INDEX IF NOT EXISTS idx_email_from ON emails(\`from\`);
 CREATE INDEX IF NOT EXISTS idx_email_to ON emails(\`to\`);
+CREATE INDEX IF NOT EXISTS idx_email_mailbox ON emails(mailbox_id);
 
 CREATE VIRTUAL TABLE IF NOT EXISTS emails_fts USING fts5(
   subject,
