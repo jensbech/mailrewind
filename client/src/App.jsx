@@ -148,7 +148,7 @@ export default function App() {
     setShowImport(false);
     refreshMailboxes().then(() => {
       setSelectedMailboxIds([newMailboxId]);
-    });
+    }).catch(() => {});
   }
 
   function handleMailboxSelection(ids) {
