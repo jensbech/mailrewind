@@ -1055,28 +1055,28 @@ body {
 }
 
 .mailbox-chip-delete {
-  width: 14px;
-  height: 14px;
+  width: 15px;
+  height: 15px;
   border-radius: 50%;
-  border: none;
-  background: transparent;
-  color: var(--text-2);
-  font-size: 13px;
+  border: 1px solid var(--border);
+  background: var(--bg-2);
+  color: var(--text-1);
+  font-size: 12px;
   line-height: 1;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  opacity: 0.45;
-  transition: opacity 0.15s, color 0.15s;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
   padding: 0;
-  margin-left: 3px;
+  margin-left: 4px;
   flex-shrink: 0;
 }
 
 .mailbox-chip-delete:hover {
-  opacity: 1;
   color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-dim2);
 }
 
 .mailbox-chip-confirm {
