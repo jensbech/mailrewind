@@ -3,7 +3,7 @@ import cors from 'cors';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { initializeDatabase, getEmails, searchEmails, getEmail, getStats, getYearCounts } from './db/database.js';
-import { indexEmails, isIndexed, clearEmails } from './services/indexService.js';
+import { indexEmails } from './services/indexService.js';
 import { getAttachmentsForEmail, getAttachment } from './db/attachments.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -16,25 +16,10 @@ app.use(cors());
 app.use(express.json());
 
 let db;
-let indexedCount = 0;
 
 async function startup() {
   db = await initializeDatabase();
-
-  const mboxPath = '/Users/home/Downloads/Takeout/Mail/All mail Including Spam and Trash.mbox';
-  const alreadyIndexed = await isIndexed(db);
-  if (!alreadyIndexed || process.env.REINDEX === 'true') {
-    if (alreadyIndexed) {
-      console.log('REINDEX=true: clearing existing index...');
-      await clearEmails(db);
-    }
-    indexedCount = await indexEmails(db, mboxPath);
-  } else {
-    const stats = await getStats(db);
-    indexedCount = stats.total;
-  }
-
-  console.log(`Ready! ${indexedCount} emails indexed`);
+  console.log('Database ready');
 }
 
 app.get('/api/years', async (req, res) => {
