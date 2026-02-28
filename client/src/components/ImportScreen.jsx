@@ -12,6 +12,7 @@ export default function ImportScreen({ onComplete, existingMailboxes = [] }) {
   const [error, setError] = useState(null);
   const logsEndRef = useRef(null);
   const esRef = useRef(null);
+  const logIdRef = useRef(0);
 
   useEffect(() => {
     logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -54,7 +55,7 @@ export default function ImportScreen({ onComplete, existingMailboxes = [] }) {
     es.onmessage = (ev) => {
       const event = JSON.parse(ev.data);
       if (event.type === 'log') {
-        setLogs(prev => [...prev.slice(-99), event.text]);
+        setLogs(prev => [...prev.slice(-99), { id: logIdRef.current++, text: event.text }]);
       } else if (event.type === 'progress') {
         setProgress(event);
       } else if (event.type === 'done') {
@@ -66,6 +67,12 @@ export default function ImportScreen({ onComplete, existingMailboxes = [] }) {
         setError(event.message);
         es.close();
       }
+    };
+
+    es.onerror = () => {
+      setImportStatus('error');
+      setError('Connection to import stream lost.');
+      es.close();
     };
 
     try {
@@ -155,8 +162,8 @@ export default function ImportScreen({ onComplete, existingMailboxes = [] }) {
             {(importStatus === 'running' || importStatus === 'done' || importStatus === 'error') && (
               <>
                 <div className="import-log-panel">
-                  {logs.map((line, i) => (
-                    <div key={i} className="import-log-line">{line}</div>
+                  {logs.map(entry => (
+                    <div key={entry.id} className="import-log-line">{entry.text}</div>
                   ))}
                   <div ref={logsEndRef} />
                 </div>
