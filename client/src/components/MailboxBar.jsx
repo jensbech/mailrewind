@@ -45,7 +45,7 @@ export default function MailboxBar({ mailboxes, selectedIds, onSelectionChange, 
             title={`${m.count?.toLocaleString() ?? 0} emails`}
           >
             {m.name}
-            {m.count > 0 && <span className="mailbox-chip-count">{m.count?.toLocaleString()}</span>}
+            {m.count > 0 && <span className="mailbox-chip-count">{m.count.toLocaleString()}</span>}
           </button>
         ))}
       </div>
