@@ -67,6 +67,8 @@ function runImport(mboxPath, mailboxId) {
     } else if (event.type === 'done') {
       importState.status = 'done';
       importState.indexed = event.indexed;
+      importState.seen = event.seen;
+      importState.skipped = event.skipped;
     }
     pushEvent(event);
   }).catch((err) => {
