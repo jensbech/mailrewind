@@ -151,6 +151,20 @@ export default function App() {
     }).catch(() => {});
   }
 
+  async function handleDeleteMailbox(id) {
+    try {
+      await axios.delete(`/api/mailboxes/${id}`);
+      await refreshMailboxes();
+      setSelectedMailboxIds(prev => {
+        if (prev === null) return null;
+        const next = prev.filter(x => x !== id);
+        return next.length === 0 ? null : next;
+      });
+    } catch {
+      // silently ignore — mailbox list will reflect actual state on next refresh
+    }
+  }
+
   function handleMailboxSelection(ids) {
     setSelectedMailboxIds(ids);
     setYearFilter('all');
@@ -181,6 +195,7 @@ export default function App() {
         selectedIds={selectedMailboxIds}
         onSelectionChange={handleMailboxSelection}
         onAddClick={() => setShowImport(true)}
+        onDeleteMailbox={handleDeleteMailbox}
       />
 
       <div className="app">
