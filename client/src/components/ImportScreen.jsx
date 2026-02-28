@@ -10,6 +10,8 @@ export default function ImportScreen({ onComplete, existingMailboxes = [] }) {
   const [progress, setProgress] = useState(null);
   const [importStatus, setImportStatus] = useState('idle');
   const [error, setError] = useState(null);
+  const [files, setFiles] = useState(null);
+  const [filesError, setFilesError] = useState(false);
   const logsEndRef = useRef(null);
   const esRef = useRef(null);
   const logIdRef = useRef(0);
@@ -19,6 +21,18 @@ export default function ImportScreen({ onComplete, existingMailboxes = [] }) {
   }, [logs]);
 
   useEffect(() => () => esRef.current?.close(), []);
+
+  function fetchFiles() {
+    setFiles(null);
+    setFilesError(false);
+    axios.get('/api/files')
+      .then(res => setFiles(res.data))
+      .catch(() => setFilesError(true));
+  }
+
+  useEffect(() => {
+    if (step === 'import') fetchFiles();
+  }, [step]);
 
   async function handleNameSubmit(e) {
     e.preventDefault();
@@ -84,11 +98,19 @@ export default function ImportScreen({ onComplete, existingMailboxes = [] }) {
     }
   }
 
+  function formatSize(bytes) {
+    if (bytes >= 1e9) return (bytes / 1e9).toFixed(1) + ' GB';
+    if (bytes >= 1e6) return (bytes / 1e6).toFixed(1) + ' MB';
+    if (bytes >= 1e3) return Math.round(bytes / 1e3) + ' KB';
+    return bytes + ' B';
+  }
+
   function handleAddAnother() {
     setImportStatus('idle');
     setLogs([]);
     setProgress(null);
     setMboxPath('/data/');
+    fetchFiles();
   }
 
   return (
@@ -138,24 +160,60 @@ export default function ImportScreen({ onComplete, existingMailboxes = [] }) {
           <div className="import-step">
             {importStatus === 'idle' && (
               <>
-                <div className="import-step-title">Specify mbox path</div>
-                <div className="import-hint">
-                  Files mounted at <code>/data/</code> via compose.yml volume
-                </div>
-                <form onSubmit={handleImportStart} className="import-form">
-                  <input
-                    className="import-input import-input-mono"
-                    type="text"
-                    placeholder="/data/mail.mbox"
-                    value={mboxPath}
-                    onChange={e => setMboxPath(e.target.value)}
-                    autoFocus
-                    spellCheck={false}
-                  />
-                  <button className="import-btn" type="submit" disabled={!mboxPath.trim()}>
-                    Start Import
-                  </button>
-                </form>
+                <div className="import-step-title">Select an mbox file</div>
+
+                {files === null && !filesError && (
+                  <div className="import-file-loading">
+                    <div className="loading-dot" /> Scanning /data/…
+                  </div>
+                )}
+
+                {filesError && (
+                  <>
+                    <div className="import-hint import-hint--error">
+                      Could not read /data/ — enter path manually
+                    </div>
+                    <form onSubmit={handleImportStart} className="import-form">
+                      <input
+                        className="import-input import-input-mono"
+                        type="text"
+                        placeholder="/data/mail.mbox"
+                        value={mboxPath}
+                        onChange={e => setMboxPath(e.target.value)}
+                        autoFocus
+                        spellCheck={false}
+                      />
+                      <button className="import-btn" type="submit" disabled={!mboxPath.trim()}>
+                        Start Import
+                      </button>
+                    </form>
+                  </>
+                )}
+
+                {files !== null && !filesError && files.length === 0 && (
+                  <div className="import-file-empty">No .mbox files found in /data/</div>
+                )}
+
+                {files !== null && !filesError && files.length > 0 && (
+                  <form onSubmit={handleImportStart} className="import-form">
+                    <div className="import-file-list">
+                      {files.map(f => (
+                        <button
+                          key={f.path}
+                          type="button"
+                          className={`import-file-row${mboxPath === f.path ? ' import-file-row--selected' : ''}`}
+                          onClick={() => setMboxPath(f.path)}
+                        >
+                          <span className="import-file-name">{f.name}</span>
+                          <span className="import-file-size">{formatSize(f.size)}</span>
+                        </button>
+                      ))}
+                    </div>
+                    <button className="import-btn" type="submit" disabled={!mboxPath.endsWith('.mbox')}>
+                      Start Import
+                    </button>
+                  </form>
+                )}
               </>
             )}
 

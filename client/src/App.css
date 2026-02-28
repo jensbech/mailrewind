@@ -823,6 +823,11 @@ body {
   border-radius: 3px;
 }
 
+.import-hint--error {
+  color: var(--accent);
+  margin-bottom: 12px;
+}
+
 .import-btn {
   font-family: var(--font-sans);
   font-size: 13px;
@@ -973,4 +978,70 @@ body {
   display: flex;
   gap: 10px;
   align-items: center;
+}
+
+/* ── File picker ─────────────────────────────────────── */
+
+.import-file-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-2);
+  font-size: 13px;
+  padding: 12px 0;
+}
+
+.import-file-empty {
+  padding: 20px 0;
+  color: var(--text-2);
+  font-size: 13px;
+}
+
+.import-file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 16px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.import-file-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-2);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s, border-color 0.1s;
+  width: 100%;
+}
+
+.import-file-row:hover {
+  background: var(--bg-hover);
+}
+
+.import-file-row--selected {
+  background: var(--bg-selected);
+  border-color: var(--accent);
+}
+
+.import-file-row--selected:hover {
+  background: var(--bg-selected);
+}
+
+.import-file-name {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-0);
+}
+
+.import-file-size {
+  font-size: 12px;
+  color: var(--text-2);
+  flex-shrink: 0;
+  margin-left: 12px;
 }
