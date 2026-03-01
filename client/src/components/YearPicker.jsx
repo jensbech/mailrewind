@@ -62,7 +62,9 @@ export default function YearPicker({ years, value, onChange, afterValue, beforeV
                 onMouseDown={e => e.stopPropagation()}
                 onChange={e => {
                   const v = e.target.value;
-                  onAfterChange(v === '' ? null : parseInt(v, 10));
+                  if (v === '') { onAfterChange(null); return; }
+                  const n = parseInt(v, 10);
+                  if (!isNaN(n)) onAfterChange(n);
                 }}
               />
             </label>
@@ -76,7 +78,9 @@ export default function YearPicker({ years, value, onChange, afterValue, beforeV
                 onMouseDown={e => e.stopPropagation()}
                 onChange={e => {
                   const v = e.target.value;
-                  onBeforeChange(v === '' ? null : parseInt(v, 10));
+                  if (v === '') { onBeforeChange(null); return; }
+                  const n = parseInt(v, 10);
+                  if (!isNaN(n)) onBeforeChange(n);
                 }}
               />
             </label>
