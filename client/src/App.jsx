@@ -207,6 +207,8 @@ export default function App() {
   function handleMailboxSelection(ids) {
     setSelectedMailboxIds(ids);
     setYearFilter([]);
+    setYearAfter(null);
+    setYearBefore(null);
     setSearch('');
     setSelected(null);
     setHasAttachments(false);
