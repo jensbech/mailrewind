@@ -166,7 +166,9 @@ export function createApp(db, { heartbeatMs = 15000, filesDir = '/data' } = {}) 
       const fromDomains = req.query.fromDomains ? String(req.query.fromDomains).split(',').map(s => s.trim()).filter(Boolean) : null;
       const attachmentType = req.query.attachmentType || null;
       const largeAttachment = req.query.largeAttachment === '1';
-      res.json(await getEmails(db, limit, offset, years, sort, mailboxIds, hasAttachments, month, hasHtml, hasSubject, fromDomains, attachmentType, largeAttachment));
+      const yearAfter = req.query.yearAfter ? parseInt(req.query.yearAfter) : null;
+      const yearBefore = req.query.yearBefore ? parseInt(req.query.yearBefore) : null;
+      res.json(await getEmails(db, limit, offset, years, sort, mailboxIds, hasAttachments, month, hasHtml, hasSubject, fromDomains, attachmentType, largeAttachment, yearAfter, yearBefore));
     } catch (err) {
       res.status(500).json({ error: err.message });
     }
@@ -195,7 +197,9 @@ export function createApp(db, { heartbeatMs = 15000, filesDir = '/data' } = {}) 
       const fromDomains = req.query.fromDomains ? String(req.query.fromDomains).split(',').map(s => s.trim()).filter(Boolean) : null;
       const attachmentType = req.query.attachmentType || null;
       const largeAttachment = req.query.largeAttachment === '1';
-      res.json(await searchEmails(db, q, parseInt(limit), parseInt(offset), years, sort === 'asc' ? 'asc' : 'desc', mailboxIds, hasAttachments, month, hasHtml, hasSubject, fromDomains, attachmentType, largeAttachment));
+      const yearAfter = req.query.yearAfter ? parseInt(req.query.yearAfter) : null;
+      const yearBefore = req.query.yearBefore ? parseInt(req.query.yearBefore) : null;
+      res.json(await searchEmails(db, q, parseInt(limit), parseInt(offset), years, sort === 'asc' ? 'asc' : 'desc', mailboxIds, hasAttachments, month, hasHtml, hasSubject, fromDomains, attachmentType, largeAttachment, yearAfter, yearBefore));
     } catch (err) {
       res.status(500).json({ error: err.message });
     }
