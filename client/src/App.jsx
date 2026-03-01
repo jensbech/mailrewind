@@ -46,6 +46,8 @@ export default function App() {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [yearFilter, setYearFilter] = useState([]);
+  const [yearAfter, setYearAfter] = useState(null);
+  const [yearBefore, setYearBefore] = useState(null);
   const [sort, setSort] = useState('desc');
   const [stats, setStats] = useState(null);
   const [years, setYears] = useState([]);
@@ -136,6 +138,8 @@ export default function App() {
     try {
       const params = { limit: PAGE_SIZE + 1, offset: currentOffset, sort, ...mbParam };
       if (yearFilter.length > 0) params.years = yearFilter.join(',');
+      if (yearAfter != null) params.yearAfter = yearAfter;
+      if (yearBefore != null) params.yearBefore = yearBefore;
       if (hasAttachments) params.hasAttachments = '1';
       if (largeAttachment) params.largeAttachment = '1';
       if (attachmentType) params.attachmentType = attachmentType;
@@ -167,7 +171,7 @@ export default function App() {
     } finally {
       setLoading(false);
     }
-  }, [debouncedSearch, yearFilter, sort, selectedMailboxIds, hasAttachments, largeAttachment, attachmentType, hasHtml, hasSubject, fromDomains]);
+  }, [debouncedSearch, yearFilter, yearAfter, yearBefore, sort, selectedMailboxIds, hasAttachments, largeAttachment, attachmentType, hasHtml, hasSubject, fromDomains]);
 
   useEffect(() => {
     if (!appReady || showImport) return;
@@ -217,10 +221,14 @@ export default function App() {
     ? `${new Date(stats.oldest).getFullYear()} – ${new Date(stats.newest).getFullYear()}`
     : '';
 
-  const activeFilterCount = [hasAttachments, largeAttachment, hasHtml, hasSubject, attachmentType].filter(Boolean).length + fromDomains.length + yearFilter.length;
+  const activeFilterCount = [hasAttachments, largeAttachment, hasHtml, hasSubject, attachmentType].filter(Boolean).length
+    + fromDomains.length + yearFilter.length
+    + (yearAfter != null ? 1 : 0) + (yearBefore != null ? 1 : 0);
 
   function clearAllFilters() {
     setYearFilter([]);
+    setYearAfter(null);
+    setYearBefore(null);
     setHasAttachments(false);
     setLargeAttachment(false);
     setAttachmentType(null);
@@ -357,7 +365,15 @@ export default function App() {
               )}
               <div className="filter-section">
                 <div className="filter-label">Year</div>
-                <YearPicker years={years} value={yearFilter} onChange={setYearFilter} />
+                <YearPicker
+                  years={years}
+                  value={yearFilter}
+                  onChange={setYearFilter}
+                  afterValue={yearAfter}
+                  beforeValue={yearBefore}
+                  onAfterChange={setYearAfter}
+                  onBeforeChange={setYearBefore}
+                />
               </div>
 
               <div className="filter-section">
