@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 
-export default function YearPicker({ years, value, onChange }) {
+export default function YearPicker({ years, value, onChange, afterValue, beforeValue, onAfterChange, onBeforeChange }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -21,11 +21,15 @@ export default function YearPicker({ years, value, onChange }) {
     }
   }
 
-  const label = value.length === 0
-    ? 'All years'
-    : value.length === 1
-      ? value[0]
-      : `${value.length} years`;
+  const label = (() => {
+    const parts = [];
+    if (afterValue != null && beforeValue != null) parts.push(`${afterValue}–${beforeValue}`);
+    else if (afterValue != null) parts.push(`After ${afterValue}`);
+    else if (beforeValue != null) parts.push(`Before ${beforeValue}`);
+    if (value.length === 1) parts.push(String(value[0]));
+    else if (value.length > 1) parts.push(`${value.length} years`);
+    return parts.length > 0 ? parts.join(' · ') : 'All years';
+  })();
 
   const checkmark = (
     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -47,6 +51,37 @@ export default function YearPicker({ years, value, onChange }) {
 
       {open && (
         <div className="year-picker-dropdown">
+          <div className="year-picker-thresholds">
+            <label className="year-picker-threshold-row">
+              <span className="year-picker-threshold-label">After</span>
+              <input
+                className="year-picker-threshold-input"
+                type="number"
+                placeholder="year"
+                value={afterValue ?? ''}
+                onMouseDown={e => e.stopPropagation()}
+                onChange={e => {
+                  const v = e.target.value;
+                  onAfterChange(v === '' ? null : parseInt(v, 10));
+                }}
+              />
+            </label>
+            <label className="year-picker-threshold-row">
+              <span className="year-picker-threshold-label">Before</span>
+              <input
+                className="year-picker-threshold-input"
+                type="number"
+                placeholder="year"
+                value={beforeValue ?? ''}
+                onMouseDown={e => e.stopPropagation()}
+                onChange={e => {
+                  const v = e.target.value;
+                  onBeforeChange(v === '' ? null : parseInt(v, 10));
+                }}
+              />
+            </label>
+          </div>
+          <div className="year-picker-divider" />
           <button
             className={`year-picker-item${value.length === 0 ? ' selected' : ''}`}
             onMouseDown={e => { e.preventDefault(); onChange([]); }}
