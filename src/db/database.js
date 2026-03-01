@@ -114,7 +114,7 @@ export function getEmail(db, id) {
   });
 }
 
-export function getEmails(db, limit = 50, offset = 0, years = null, sort = 'desc', mailboxIds = null, hasAttachments = false, month = null, hasHtml = false, hasSubject = false, fromDomains = null, attachmentType = null, largeAttachment = false) {
+export function getEmails(db, limit = 50, offset = 0, years = null, sort = 'desc', mailboxIds = null, hasAttachments = false, month = null, hasHtml = false, hasSubject = false, fromDomains = null, attachmentType = null, largeAttachment = false, yearAfter = null, yearBefore = null) {
   return new Promise((resolve, reject) => {
     const order = sort === 'asc' ? 'ASC' : 'DESC';
     const params = [];
@@ -130,6 +130,14 @@ export function getEmails(db, limit = 50, offset = 0, years = null, sort = 'desc
         return '(date >= ? AND date < ?)';
       });
       conditions.push(`(${yearClauses.join(' OR ')})`);
+    }
+    if (yearAfter != null) {
+      conditions.push('date >= ?');
+      params.push(new Date(`${yearAfter}-01-01`).getTime());
+    }
+    if (yearBefore != null) {
+      conditions.push('date < ?');
+      params.push(new Date(`${yearBefore}-01-01`).getTime());
     }
     if (month) {
       conditions.push("strftime('%m', date/1000, 'unixepoch') = ?");
@@ -160,7 +168,7 @@ export function getEmails(db, limit = 50, offset = 0, years = null, sort = 'desc
   });
 }
 
-export function searchEmails(db, query, limit = 50, offset = 0, years = null, sort = 'desc', mailboxIds = null, hasAttachments = false, month = null, hasHtml = false, hasSubject = false, fromDomains = null, attachmentType = null, largeAttachment = false) {
+export function searchEmails(db, query, limit = 50, offset = 0, years = null, sort = 'desc', mailboxIds = null, hasAttachments = false, month = null, hasHtml = false, hasSubject = false, fromDomains = null, attachmentType = null, largeAttachment = false, yearAfter = null, yearBefore = null) {
   return new Promise((resolve, reject) => {
     const order = sort === 'asc' ? 'ASC' : 'DESC';
     const searchPattern = `%${query}%`;
@@ -179,6 +187,14 @@ export function searchEmails(db, query, limit = 50, offset = 0, years = null, so
         return '(date >= ? AND date < ?)';
       });
       conditions.push(`(${yearClauses.join(' OR ')})`);
+    }
+    if (yearAfter != null) {
+      conditions.push('date >= ?');
+      params.push(new Date(`${yearAfter}-01-01`).getTime());
+    }
+    if (yearBefore != null) {
+      conditions.push('date < ?');
+      params.push(new Date(`${yearBefore}-01-01`).getTime());
     }
     if (month) {
       conditions.push("strftime('%m', date/1000, 'unixepoch') = ?");
