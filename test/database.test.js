@@ -150,12 +150,12 @@ describe('Database', () => {
     });
 
     it('filters by year (matching)', async () => {
-      const emails = await getEmails(db, 50, 0, '2023', 'desc', [mailboxId]);
+      const emails = await getEmails(db, 50, 0, ['2023'], 'desc', [mailboxId]);
       assert.ok(emails.length >= 1);
     });
 
     it('returns empty array for year with no emails', async () => {
-      const emails = await getEmails(db, 50, 0, '1990', 'desc', [mailboxId]);
+      const emails = await getEmails(db, 50, 0, ['1990'], 'desc', [mailboxId]);
       assert.strictEqual(emails.length, 0);
     });
 
@@ -198,12 +198,12 @@ describe('Database', () => {
     });
 
     it('filters by year (matching)', async () => {
-      const results = await searchEmails(db, 'Hello', 50, 0, '2023', 'asc', [mailboxId]);
+      const results = await searchEmails(db, 'Hello', 50, 0, ['2023'], 'asc', [mailboxId]);
       assert.ok(results.length >= 1);
     });
 
     it('returns empty for year with no results', async () => {
-      const results = await searchEmails(db, 'Hello', 50, 0, '1990', 'desc', [mailboxId]);
+      const results = await searchEmails(db, 'Hello', 50, 0, ['1990'], 'desc', [mailboxId]);
       assert.strictEqual(results.length, 0);
     });
 
