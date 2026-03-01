@@ -122,15 +122,15 @@ describe('MBOX Parser', () => {
       assert.deepStrictEqual(result.attachments, []);
     });
 
-    it('returns null when email has no from and no subject', async () => {
+    it('returns skip reason when email has no from and no subject', async () => {
       const raw = 'To: someone@example.com\n\nBody without from or subject';
       const result = await parseEmailString(raw);
-      assert.strictEqual(result, null);
+      assert.strictEqual(result?._skipReason, 'empty');
     });
 
-    it('returns null for unparseable content (catch path)', async () => {
+    it('returns skip reason for unparseable content (catch path)', async () => {
       const result = await parseEmailString(null);
-      assert.strictEqual(result, null);
+      assert.strictEqual(result?._skipReason, 'error');
     });
 
     it('fills missing optional fields with empty strings', async () => {

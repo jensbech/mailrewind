@@ -117,7 +117,7 @@ describe('indexService', () => {
       t.mock.timers.tick(timeoutForSize(raw.length) + 1);
 
       const result = await resultPromise;
-      assert.strictEqual(result, null);
+      assert.strictEqual(result?._skipReason, 'timeout');
     });
 
     it('logs warning with decoded subject on timeout', async (t) => {
