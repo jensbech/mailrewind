@@ -1,0 +1,9 @@
+From sender@example.com
+From: sender@example.com
+To: recipient@example.com
+Subject: Short Envelope
+Message-ID: <short-env@example.com>
+Date: Mon, 1 Jan 2024 12:00:00 +0000
+
+Envelope line has only 2 parts, so envelope date is null.
+

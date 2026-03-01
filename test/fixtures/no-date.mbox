@@ -1,0 +1,8 @@
+From sender@example.com Mon Jan  1 00:00:00 2024
+From: sender@example.com
+To: recipient@example.com
+Subject: Email Without Date Header
+Message-ID: <no-date@example.com>
+
+This email has no Date header so envelope date is used as fallback.
+

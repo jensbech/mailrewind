@@ -19,7 +19,7 @@ export async function parseEmailString(raw, envelopeDate = null) {
   const parseStart = Date.now();
   try {
     const parsed = await simpleParser(raw);
-    if (!parsed.from?.text && !parsed.subject) return null;
+    if (!parsed.from?.text && !parsed.subject) return { _skipReason: 'empty' };
     const parsedMs = parsed.date?.getTime();
     const isNowFallback = parsedMs && Math.abs(parsedMs - parseStart) < 60000;
     const date = (isNowFallback ? null : parsed.date) || envelopeDate || null;
@@ -42,7 +42,7 @@ export async function parseEmailString(raw, envelopeDate = null) {
       }))
     };
   } catch {
-    return null;
+    return { _skipReason: 'error' };
   }
 }
 
@@ -72,7 +72,7 @@ export async function parseEmailFile(filePath, callback = null) {
   const emails = [];
   for await (const { raw, envelopeDate } of streamRawEmails(filePath)) {
     const email = await parseEmailString(raw, envelopeDate);
-    if (email) {
+    if (email && !email._skipReason) {
       callback ? await callback(email) : emails.push(email);
     }
   }

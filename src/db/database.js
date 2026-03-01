@@ -94,6 +94,17 @@ export function insertBatch(db, emails, mailboxId) {
   });
 }
 
+function attachmentTypeClause(type) {
+  const base = 'EXISTS (SELECT 1 FROM attachments WHERE emailId = emails.id AND';
+  const map = {
+    image:    `${base} contentType LIKE 'image/%')`,
+    pdf:      `${base} contentType = 'application/pdf')`,
+    document: `${base} (contentType LIKE 'application/vnd.%' OR contentType LIKE 'application/msword%' OR contentType = 'application/rtf'))`,
+    media:    `${base} (contentType LIKE 'audio/%' OR contentType LIKE 'video/%'))`,
+  };
+  return map[type] || null;
+}
+
 export function getEmail(db, id) {
   return new Promise((resolve, reject) => {
     db.get('SELECT * FROM emails WHERE id = ?', [id], (err, row) => {
@@ -103,7 +114,7 @@ export function getEmail(db, id) {
   });
 }
 
-export function getEmails(db, limit = 50, offset = 0, year = null, sort = 'desc', mailboxIds = null) {
+export function getEmails(db, limit = 50, offset = 0, years = null, sort = 'desc', mailboxIds = null, hasAttachments = false, month = null, hasHtml = false, hasSubject = false, fromDomains = null, attachmentType = null, largeAttachment = false) {
   return new Promise((resolve, reject) => {
     const order = sort === 'asc' ? 'ASC' : 'DESC';
     const params = [];
@@ -113,11 +124,31 @@ export function getEmails(db, limit = 50, offset = 0, year = null, sort = 'desc'
       conditions.push(`mailbox_id IN (${mailboxIds.map(() => '?').join(',')})`);
       params.push(...mailboxIds);
     }
-    if (year) {
-      const start = new Date(`${year}-01-01`).getTime();
-      const end = new Date(`${Number(year) + 1}-01-01`).getTime();
-      conditions.push('date >= ? AND date < ?');
-      params.push(start, end);
+    if (years && years.length > 0) {
+      const yearClauses = years.map(y => {
+        params.push(new Date(`${y}-01-01`).getTime(), new Date(`${Number(y) + 1}-01-01`).getTime());
+        return '(date >= ? AND date < ?)';
+      });
+      conditions.push(`(${yearClauses.join(' OR ')})`);
+    }
+    if (month) {
+      conditions.push("strftime('%m', date/1000, 'unixepoch') = ?");
+      params.push(String(month).padStart(2, '0'));
+    }
+    if (hasAttachments) {
+      conditions.push('EXISTS (SELECT 1 FROM attachments WHERE emailId = emails.id)');
+    }
+    if (largeAttachment) {
+      conditions.push('EXISTS (SELECT 1 FROM attachments WHERE emailId = emails.id AND size > 1048576)');
+    }
+    const attClause = attachmentTypeClause(attachmentType);
+    if (attClause) conditions.push(attClause);
+    if (hasHtml) conditions.push("bodyHTML IS NOT NULL AND bodyHTML != ''");
+    if (hasSubject) conditions.push("subject IS NOT NULL AND subject != ''");
+    if (fromDomains && fromDomains.length > 0) {
+      const conds = fromDomains.map(() => '`from` LIKE ?').join(' OR ');
+      conditions.push(`(${conds})`);
+      fromDomains.forEach(d => params.push(`%@${d}%`));
     }
 
     let sql = 'SELECT * FROM emails';
@@ -129,7 +160,7 @@ export function getEmails(db, limit = 50, offset = 0, year = null, sort = 'desc'
   });
 }
 
-export function searchEmails(db, query, limit = 50, offset = 0, year = null, sort = 'desc', mailboxIds = null) {
+export function searchEmails(db, query, limit = 50, offset = 0, years = null, sort = 'desc', mailboxIds = null, hasAttachments = false, month = null, hasHtml = false, hasSubject = false, fromDomains = null, attachmentType = null, largeAttachment = false) {
   return new Promise((resolve, reject) => {
     const order = sort === 'asc' ? 'ASC' : 'DESC';
     const searchPattern = `%${query}%`;
@@ -142,16 +173,62 @@ export function searchEmails(db, query, limit = 50, offset = 0, year = null, sor
       conditions.push(`mailbox_id IN (${mailboxIds.map(() => '?').join(',')})`);
       params.push(...mailboxIds);
     }
-    if (year) {
-      const start = new Date(`${year}-01-01`).getTime();
-      const end = new Date(`${Number(year) + 1}-01-01`).getTime();
-      conditions.push('date >= ? AND date < ?');
-      params.push(start, end);
+    if (years && years.length > 0) {
+      const yearClauses = years.map(y => {
+        params.push(new Date(`${y}-01-01`).getTime(), new Date(`${Number(y) + 1}-01-01`).getTime());
+        return '(date >= ? AND date < ?)';
+      });
+      conditions.push(`(${yearClauses.join(' OR ')})`);
+    }
+    if (month) {
+      conditions.push("strftime('%m', date/1000, 'unixepoch') = ?");
+      params.push(String(month).padStart(2, '0'));
+    }
+    if (hasAttachments) {
+      conditions.push('EXISTS (SELECT 1 FROM attachments WHERE emailId = emails.id)');
+    }
+    if (largeAttachment) {
+      conditions.push('EXISTS (SELECT 1 FROM attachments WHERE emailId = emails.id AND size > 1048576)');
+    }
+    const attClause = attachmentTypeClause(attachmentType);
+    if (attClause) conditions.push(attClause);
+    if (hasHtml) conditions.push("bodyHTML IS NOT NULL AND bodyHTML != ''");
+    if (hasSubject) conditions.push("subject IS NOT NULL AND subject != ''");
+    if (fromDomains && fromDomains.length > 0) {
+      const conds = fromDomains.map(() => '`from` LIKE ?').join(' OR ');
+      conditions.push(`(${conds})`);
+      fromDomains.forEach(d => params.push(`%@${d}%`));
     }
 
     let sql = 'SELECT * FROM emails WHERE ' + conditions.join(' AND ');
     sql += ` ORDER BY date ${order} LIMIT ? OFFSET ?`;
     params.push(limit, offset);
+
+    db.all(sql, params, (err, rows) => err ? reject(err) : resolve(rows || []));
+  });
+}
+
+export function getTopDomains(db, mailboxIds = null, limit = 15) {
+  return new Promise((resolve, reject) => {
+    const params = [];
+    let mailboxWhere = '';
+    if (mailboxIds && mailboxIds.length > 0) {
+      mailboxWhere = `AND mailbox_id IN (${mailboxIds.map(() => '?').join(',')})`;
+      params.push(...mailboxIds);
+    }
+    params.push(limit);
+
+    const sql = `
+      SELECT domain, COUNT(*) as count FROM (
+        SELECT trim(rtrim(lower(substr(\`from\`, instr(\`from\`, '@') + 1)), '> ')) as domain
+        FROM emails
+        WHERE \`from\` LIKE '%@%' ${mailboxWhere}
+      )
+      WHERE domain != '' AND domain IS NOT NULL AND domain NOT LIKE '% %' AND domain NOT LIKE '%@%'
+      GROUP BY domain
+      ORDER BY count DESC
+      LIMIT ?
+    `;
 
     db.all(sql, params, (err, rows) => err ? reject(err) : resolve(rows || []));
   });

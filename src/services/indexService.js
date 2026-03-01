@@ -3,10 +3,10 @@ import { insertBatch } from '../db/database.js';
 import { saveAttachments, getEmailIdByMessageId } from '../db/attachments.js';
 
 const BATCH_SIZE = 20;
-const BASE_TIMEOUT_MS = 8000;
+export const BASE_TIMEOUT_MS = 8000;
 const LOG_EVERY = 10;
 
-function decodeMimeWord(str) {
+export function decodeMimeWord(str) {
   return str.replace(/=\?([^?]+)\?([BbQq])\?([^?]*)\?=/g, (_, charset, enc, data) => {
     try {
       const buf = enc.toUpperCase() === 'B'
@@ -17,23 +17,23 @@ function decodeMimeWord(str) {
   });
 }
 
-function subjectHint(raw) {
+export function subjectHint(raw) {
   const m = raw.match(/^Subject:\s*(.+)$/im);
   if (!m) return '(no subject)';
   return decodeMimeWord(m[1]).slice(0, 60).trim();
 }
 
-function timeoutForSize(bytes) {
+export function timeoutForSize(bytes) {
   return Math.max(BASE_TIMEOUT_MS, Math.ceil(bytes / 1024) * 2);
 }
 
-function parseWithTimeout(raw, envelopeDate) {
+export function parseWithTimeout(raw, envelopeDate, _parseFn = parseEmailString) {
   let timedOut = false;
   const ms = timeoutForSize(raw.length);
   const timer = new Promise(resolve =>
-    setTimeout(() => { timedOut = true; resolve(null); }, ms)
+    setTimeout(() => { timedOut = true; resolve({ _skipReason: 'timeout' }); }, ms)
   );
-  return Promise.race([parseEmailString(raw, envelopeDate), timer]).then(result => {
+  return Promise.race([_parseFn(raw, envelopeDate), timer]).then(result => {
     if (timedOut) {
       const text = `  ⚠ TIMEOUT (${(raw.length / 1024).toFixed(0)}KB, limit ${ms}ms): ${subjectHint(raw)}`;
       console.warn(text);
@@ -46,10 +46,21 @@ async function processBatch(db, batch, mailboxId) {
   const parsed = await Promise.all(
     batch.map(({ raw, envelopeDate }) => parseWithTimeout(raw, envelopeDate))
   );
-  const valid = parsed.filter(Boolean);
-  if (valid.length === 0) return 0;
 
-  const count = await insertBatch(db, valid, mailboxId);
+  const skipCounts = { timeout: 0, error: 0, empty: 0, duplicate: 0 };
+  const valid = [];
+  for (const p of parsed) {
+    if (p?._skipReason) {
+      skipCounts[p._skipReason] = (skipCounts[p._skipReason] || 0) + 1;
+    } else if (p) {
+      valid.push(p);
+    }
+  }
+
+  if (valid.length === 0) return { inserted: 0, skipCounts };
+
+  const inserted = await insertBatch(db, valid, mailboxId);
+  skipCounts.duplicate += valid.length - inserted;
 
   const withAttachments = valid.filter(e => e.attachments?.length > 0);
   for (const email of withAttachments) {
@@ -59,7 +70,7 @@ async function processBatch(db, batch, mailboxId) {
     }
   }
 
-  return count;
+  return { inserted, skipCounts };
 }
 
 export async function indexEmails(db, mboxPath, mailboxId, onEvent = () => {}) {
@@ -70,17 +81,25 @@ export async function indexEmails(db, mboxPath, mailboxId, onEvent = () => {}) {
   let seen = 0;
   let indexed = 0;
   let skipped = 0;
+  const skipReasons = { timeout: 0, error: 0, empty: 0, duplicate: 0 };
   let batch = [];
   let batchStart = Date.now();
+
+  function mergeSkipCounts(counts) {
+    for (const [k, v] of Object.entries(counts)) {
+      skipReasons[k] = (skipReasons[k] || 0) + v;
+    }
+  }
 
   for await (const item of streamRawEmails(mboxPath)) {
     seen++;
     batch.push(item);
 
     if (batch.length >= BATCH_SIZE) {
-      const result = await processBatch(db, batch, mailboxId);
-      indexed += result;
-      skipped += BATCH_SIZE - result;
+      const { inserted, skipCounts } = await processBatch(db, batch, mailboxId);
+      indexed += inserted;
+      skipped += BATCH_SIZE - inserted;
+      mergeSkipCounts(skipCounts);
       batch = [];
 
       if (seen % LOG_EVERY === 0) {
@@ -97,16 +116,17 @@ export async function indexEmails(db, mboxPath, mailboxId, onEvent = () => {}) {
   }
 
   if (batch.length > 0) {
-    const result = await processBatch(db, batch, mailboxId);
-    indexed += result;
-    skipped += batch.length - result;
+    const { inserted, skipCounts } = await processBatch(db, batch, mailboxId);
+    indexed += inserted;
+    skipped += batch.length - inserted;
+    mergeSkipCounts(skipCounts);
   }
 
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
   const doneText = `✓ Done in ${elapsed}s — indexed: ${indexed}, skipped: ${skipped}, total seen: ${seen}`;
   console.log(doneText);
   emit('log', { text: doneText });
-  emit('done', { indexed, seen, skipped });
+  emit('done', { indexed, seen, skipped, skipReasons });
   return indexed;
 }
 

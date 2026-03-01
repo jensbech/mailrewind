@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 
-export default function ImportScreen({ onComplete, existingMailboxes = [] }) {
+export default function ImportScreen({ onComplete, existingMailboxes = [], onCancel }) {
   const [step, setStep] = useState('name');
   const [mailboxName, setMailboxName] = useState('');
   const [targetMailboxId, setTargetMailboxId] = useState(null);
   const [mboxPath, setMboxPath] = useState('/data/');
   const [logs, setLogs] = useState([]);
   const [progress, setProgress] = useState(null);
+  const [skipReasons, setSkipReasons] = useState(null);
   const [importStatus, setImportStatus] = useState('idle');
   const [error, setError] = useState(null);
   const [files, setFiles] = useState(null);
@@ -61,6 +62,7 @@ export default function ImportScreen({ onComplete, existingMailboxes = [] }) {
     setLogs([]);
     setProgress(null);
     setError(null);
+    setSkipReasons(null);
 
     esRef.current?.close();
     const es = new EventSource('/api/import/events');
@@ -74,7 +76,8 @@ export default function ImportScreen({ onComplete, existingMailboxes = [] }) {
         setProgress(event);
       } else if (event.type === 'done') {
         setImportStatus('done');
-        setProgress(p => ({ ...p, indexed: event.indexed }));
+        setProgress(p => ({ ...p, indexed: event.indexed, skipped: event.skipped }));
+        if (event.skipped > 0) setSkipReasons(event.skipReasons);
         es.close();
       } else if (event.type === 'error') {
         setImportStatus('error');
@@ -116,12 +119,21 @@ export default function ImportScreen({ onComplete, existingMailboxes = [] }) {
   return (
     <div className="import-screen">
       <div className="import-box">
-        <div className="import-logo">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="2" y="4" width="20" height="16" rx="2"/>
-            <path d="m2 7 10 7 10-7"/>
-          </svg>
-          Email Archive
+        <div className="import-logo-row">
+          <div className="import-logo">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="2" y="4" width="20" height="16" rx="2"/>
+              <path d="m2 7 10 7 10-7"/>
+            </svg>
+            Email Archive
+          </div>
+          {onCancel && (
+            <button className="import-close-btn" onClick={onCancel} title="Close">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <path d="M18 6L6 18M6 6l12 12"/>
+              </svg>
+            </button>
+          )}
         </div>
 
         {step === 'name' && (
@@ -160,7 +172,15 @@ export default function ImportScreen({ onComplete, existingMailboxes = [] }) {
           <div className="import-step">
             {importStatus === 'idle' && (
               <>
-                <div className="import-step-title">Select an mbox file</div>
+                <div className="import-step-header">
+                  <button className="import-back-btn" onClick={() => setStep('name')}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M19 12H5M12 5l-7 7 7 7"/>
+                    </svg>
+                    Back
+                  </button>
+                  <div className="import-step-title">Select an mbox file</div>
+                </div>
 
                 {files === null && !filesError && (
                   <div className="import-file-loading">
@@ -219,19 +239,33 @@ export default function ImportScreen({ onComplete, existingMailboxes = [] }) {
 
             {(importStatus === 'running' || importStatus === 'done' || importStatus === 'error') && (
               <>
-                <div className="import-log-panel">
-                  {logs.map(entry => (
-                    <div key={entry.id} className="import-log-line">{entry.text}</div>
-                  ))}
-                  <div ref={logsEndRef} />
+                <div className="import-status-bar">
+                  <div className="import-status-bar-left">
+                    {importStatus === 'running' && <><div className="loading-dot" /><span>Importing…</span></>}
+                    {importStatus === 'done' && <span className="import-status-done">✦ Done</span>}
+                    {importStatus === 'error' && <span className="import-status-error">Import failed</span>}
+                  </div>
+                  {progress?.elapsed != null && (
+                    <span className="import-elapsed">{progress.elapsed}s elapsed</span>
+                  )}
                 </div>
 
-                {progress && (
-                  <div className="import-counter">
-                    Seen: {progress.seen?.toLocaleString()} · Indexed: {progress.indexed?.toLocaleString()} · Skipped: {(progress.skipped ?? 0).toLocaleString()}
-                    {progress.rate ? ` · ~${progress.rate} emails/s` : ''}
+                <div className="import-stats-grid">
+                  <div className="import-stat">
+                    <div className="import-stat-value">{(progress?.indexed ?? 0).toLocaleString()}</div>
+                    <div className="import-stat-label">Indexed</div>
                   </div>
-                )}
+                  <div className={`import-stat${(progress?.skipped ?? 0) > 0 ? ' import-stat--warn' : ''}`}>
+                    <div className="import-stat-value">{(progress?.skipped ?? 0).toLocaleString()}</div>
+                    <div className="import-stat-label">Skipped</div>
+                  </div>
+                  <div className="import-stat">
+                    <div className="import-stat-value">
+                      {importStatus === 'running' && progress?.rate ? `~${progress.rate}` : progress?.elapsed != null ? `${progress.elapsed}s` : '—'}
+                    </div>
+                    <div className="import-stat-label">{importStatus === 'running' ? 'per second' : 'elapsed'}</div>
+                  </div>
+                </div>
 
                 {importStatus === 'error' && (
                   <div className="import-error">{error}</div>
@@ -239,7 +273,37 @@ export default function ImportScreen({ onComplete, existingMailboxes = [] }) {
 
                 {importStatus === 'done' && (
                   <div className="import-done">
-                    <span>✦ Done — {progress?.indexed?.toLocaleString()} emails indexed</span>
+                    {skipReasons && (
+                      <div className="import-skip-summary">
+                        <div className="import-skip-title">
+                          {(progress?.skipped ?? 0).toLocaleString()} email{progress?.skipped !== 1 ? 's' : ''} skipped
+                        </div>
+                        {skipReasons.duplicate > 0 && (
+                          <div className="import-skip-row">
+                            <span className="import-skip-count">{skipReasons.duplicate.toLocaleString()}</span>
+                            duplicate message IDs — already in archive
+                          </div>
+                        )}
+                        {skipReasons.empty > 0 && (
+                          <div className="import-skip-row">
+                            <span className="import-skip-count">{skipReasons.empty.toLocaleString()}</span>
+                            no sender or subject — likely system messages
+                          </div>
+                        )}
+                        {skipReasons.timeout > 0 && (
+                          <div className="import-skip-row">
+                            <span className="import-skip-count">{skipReasons.timeout.toLocaleString()}</span>
+                            parse timed out — email too large or complex
+                          </div>
+                        )}
+                        {skipReasons.error > 0 && (
+                          <div className="import-skip-row">
+                            <span className="import-skip-count">{skipReasons.error.toLocaleString()}</span>
+                            malformed — could not be parsed
+                          </div>
+                        )}
+                      </div>
+                    )}
                     <div className="import-done-actions">
                       <button className="import-btn-secondary" onClick={handleAddAnother}>
                         Add another file to this mailbox
@@ -248,12 +312,6 @@ export default function ImportScreen({ onComplete, existingMailboxes = [] }) {
                         Open Archive →
                       </button>
                     </div>
-                  </div>
-                )}
-
-                {importStatus === 'running' && (
-                  <div className="import-running-indicator">
-                    <div className="loading-dot" /> Importing…
                   </div>
                 )}
               </>

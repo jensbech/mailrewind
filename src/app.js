@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join, resolve } from 'path';
 import {
   getEmails, searchEmails, getEmail, getStats, getYearCounts,
-  createMailbox, getMailboxes, deleteMailbox
+  createMailbox, getMailboxes, deleteMailbox, getTopDomains
 } from './db/database.js';
 import { indexEmails } from './services/indexService.js';
 import { getAttachmentsForEmail, getAttachment } from './db/attachments.js';
@@ -156,10 +156,17 @@ export function createApp(db, { heartbeatMs = 15000, filesDir = '/data' } = {}) 
     try {
       const limit = parseInt(req.query.limit || '50');
       const offset = parseInt(req.query.offset || '0');
-      const year = req.query.year || null;
+      const years = req.query.years ? String(req.query.years).split(',').map(s => s.trim()).filter(Boolean) : null;
       const sort = req.query.sort === 'asc' ? 'asc' : 'desc';
       const mailboxIds = parseMailboxIds(req.query.mailboxIds);
-      res.json(await getEmails(db, limit, offset, year, sort, mailboxIds));
+      const hasAttachments = req.query.hasAttachments === '1';
+      const month = req.query.month ? parseInt(req.query.month) : null;
+      const hasHtml = req.query.hasHtml === '1';
+      const hasSubject = req.query.hasSubject === '1';
+      const fromDomains = req.query.fromDomains ? String(req.query.fromDomains).split(',').map(s => s.trim()).filter(Boolean) : null;
+      const attachmentType = req.query.attachmentType || null;
+      const largeAttachment = req.query.largeAttachment === '1';
+      res.json(await getEmails(db, limit, offset, years, sort, mailboxIds, hasAttachments, month, hasHtml, hasSubject, fromDomains, attachmentType, largeAttachment));
     } catch (err) {
       res.status(500).json({ error: err.message });
     }
@@ -177,10 +184,27 @@ export function createApp(db, { heartbeatMs = 15000, filesDir = '/data' } = {}) 
 
   app.get('/api/search', async (req, res) => {
     try {
-      const { q, limit = '50', offset = '0', year, sort } = req.query;
+      const { q, limit = '50', offset = '0', sort } = req.query;
       if (!q) return res.status(400).json({ error: 'Query required' });
+      const years = req.query.years ? String(req.query.years).split(',').map(s => s.trim()).filter(Boolean) : null;
       const mailboxIds = parseMailboxIds(req.query.mailboxIds);
-      res.json(await searchEmails(db, q, parseInt(limit), parseInt(offset), year || null, sort === 'asc' ? 'asc' : 'desc', mailboxIds));
+      const hasAttachments = req.query.hasAttachments === '1';
+      const month = req.query.month ? parseInt(req.query.month) : null;
+      const hasHtml = req.query.hasHtml === '1';
+      const hasSubject = req.query.hasSubject === '1';
+      const fromDomains = req.query.fromDomains ? String(req.query.fromDomains).split(',').map(s => s.trim()).filter(Boolean) : null;
+      const attachmentType = req.query.attachmentType || null;
+      const largeAttachment = req.query.largeAttachment === '1';
+      res.json(await searchEmails(db, q, parseInt(limit), parseInt(offset), years, sort === 'asc' ? 'asc' : 'desc', mailboxIds, hasAttachments, month, hasHtml, hasSubject, fromDomains, attachmentType, largeAttachment));
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get('/api/domains', async (req, res) => {
+    try {
+      const mailboxIds = parseMailboxIds(req.query.mailboxIds);
+      res.json(await getTopDomains(db, mailboxIds));
     } catch (err) {
       res.status(500).json({ error: err.message });
     }
