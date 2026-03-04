@@ -5,6 +5,13 @@ services:
     restart: unless-stopped
     ports:
       - "3001:3001"
+    environment:
+      - ENABLE_AUTH=${ENABLE_AUTH:-false}
+      - ALLOWED_USERS=${ALLOWED_USERS:-}
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID:-}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET:-}
+      - SESSION_SECRET=${SESSION_SECRET:-}
+      - BASE_URL=${BASE_URL:-http://localhost:3001}
     volumes:
       - ${MBOX_DIR:-~/Downloads}:/data
       - mailrewind-db:/app/data
