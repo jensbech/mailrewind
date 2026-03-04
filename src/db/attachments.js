@@ -2,7 +2,7 @@ import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 
 function sanitizeFilename(name) {
-  return name.replace(/[/\\?%*:|"<>]/g, '-').slice(0, 200) || 'attachment';
+  return name.replace(/[\r\n/\\?%*:|"<>]/g, '-').slice(0, 200) || 'attachment';
 }
 
 export async function saveAttachments(db, emailId, attachments) {

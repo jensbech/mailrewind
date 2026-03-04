@@ -1,6 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import DOMPurify from 'dompurify';
+
+const PURIFY_CONFIG = {
+  FORBID_TAGS: ['form', 'input', 'textarea', 'select', 'button', 'object', 'embed', 'link', 'meta'],
+  FORBID_ATTR: ['action', 'formaction', 'xlink:href'],
+};
 
 function fileIcon(contentType) {
   if (!contentType) return '📎';
@@ -30,6 +35,39 @@ function formatFullDate(ts) {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
     hour: '2-digit', minute: '2-digit'
   });
+}
+
+function SandboxedHtml({ html }) {
+  const iframeRef = useRef(null);
+  const sanitized = DOMPurify.sanitize(html, PURIFY_CONFIG);
+
+  useEffect(() => {
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+    const doc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (!doc) return;
+    doc.open();
+    doc.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{font-family:system-ui,sans-serif;margin:8px;color:inherit;word-wrap:break-word}img{max-width:100%}</style></head><body>${sanitized}</body></html>`);
+    doc.close();
+
+    const resize = () => {
+      if (doc.body) iframe.style.height = doc.body.scrollHeight + 'px';
+    };
+    resize();
+    const observer = new MutationObserver(resize);
+    if (doc.body) observer.observe(doc.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [sanitized]);
+
+  return (
+    <iframe
+      ref={iframeRef}
+      sandbox=""
+      className="body-html-iframe"
+      style={{ width: '100%', border: 'none', minHeight: '100px' }}
+      title="Email content"
+    />
+  );
 }
 
 export default function EmailDetail({ email }) {
@@ -81,7 +119,7 @@ export default function EmailDetail({ email }) {
 
       <div className="detail-body">
         {email.bodyHTML ? (
-          <div className="body-html" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(email.bodyHTML) }} />
+          <SandboxedHtml html={email.bodyHTML} />
         ) : (
           <pre className="body-plain">{email.bodyText || '(no body)'}</pre>
         )}

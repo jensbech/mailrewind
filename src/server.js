@@ -9,10 +9,12 @@ async function startup() {
   const authConfig = createAuthConfig();
   const { app, runImport } = createApp(db, { authConfig });
 
+  const host = authConfig.enabled ? '0.0.0.0' : '127.0.0.1';
+
   if (authConfig.enabled) {
     console.log(`Auth enabled. Allowed users: ${authConfig.allowedUsers.join(', ')}`);
   } else {
-    console.warn('WARNING: Authentication is disabled (ENABLE_AUTH != true). All data is publicly accessible.');
+    console.warn('WARNING: Authentication is disabled (ENABLE_AUTH != true). Binding to localhost only.');
   }
 
   if (process.env.MBOX_PATH && process.env.MAILBOX_NAME) {
@@ -21,7 +23,7 @@ async function startup() {
     runImport(process.env.MBOX_PATH, mailbox.id);
   }
 
-  app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+  app.listen(PORT, host, () => console.log(`Server running on http://${host}:${PORT}`));
 }
 
 startup().catch(err => {

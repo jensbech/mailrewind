@@ -187,7 +187,7 @@ describe('Server API', () => {
         .post('/api/import/start')
         .send({ path: resolve('test/sample.mbox') });
       assert.strictEqual(res.status, 400);
-      assert.strictEqual(res.body.error, 'mailboxId required');
+      assert.strictEqual(res.body.error, 'Valid mailboxId required');
     });
 
     it('returns 400 when path is outside filesDir', async () => {

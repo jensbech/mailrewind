@@ -105,6 +105,51 @@ function attachmentTypeClause(type) {
   return map[type] || null;
 }
 
+function escapeLike(str) {
+  return str.replace(/[%_\\]/g, c => '\\' + c);
+}
+
+function buildFilterConditions(params, conditions, { years, yearAfter, yearBefore, month, hasAttachments, largeAttachment, attachmentType, hasHtml, hasSubject, fromDomains, mailboxIds }) {
+  if (mailboxIds && mailboxIds.length > 0) {
+    conditions.push(`mailbox_id IN (${mailboxIds.map(() => '?').join(',')})`);
+    params.push(...mailboxIds);
+  }
+  if (years && years.length > 0) {
+    const yearClauses = years.map(y => {
+      params.push(new Date(`${y}-01-01`).getTime(), new Date(`${Number(y) + 1}-01-01`).getTime());
+      return '(date >= ? AND date < ?)';
+    });
+    conditions.push(`(${yearClauses.join(' OR ')})`);
+  }
+  if (yearAfter != null) {
+    conditions.push('date >= ?');
+    params.push(new Date(`${yearAfter}-01-01`).getTime());
+  }
+  if (yearBefore != null) {
+    conditions.push('date < ?');
+    params.push(new Date(`${yearBefore}-01-01`).getTime());
+  }
+  if (month) {
+    conditions.push("strftime('%m', date/1000, 'unixepoch') = ?");
+    params.push(String(month).padStart(2, '0'));
+  }
+  if (hasAttachments) {
+    conditions.push('EXISTS (SELECT 1 FROM attachments WHERE emailId = emails.id)');
+  }
+  if (largeAttachment) {
+    conditions.push('EXISTS (SELECT 1 FROM attachments WHERE emailId = emails.id AND size > 1048576)');
+  }
+  const attClause = attachmentTypeClause(attachmentType);
+  if (attClause) conditions.push(attClause);
+  if (hasHtml) conditions.push("bodyHTML IS NOT NULL AND bodyHTML != ''");
+  if (hasSubject) conditions.push("subject IS NOT NULL AND subject != ''");
+  if (fromDomains && fromDomains.length > 0) {
+    const conds = fromDomains.map(() => '`from` LIKE ? ESCAPE \'\\\'').join(' OR ');
+    conditions.push(`(${conds})`);
+    fromDomains.forEach(d => params.push(`%@${escapeLike(d)}%`));
+  }
+}
+
 export function getEmail(db, id) {
   return new Promise((resolve, reject) => {
     db.get('SELECT * FROM emails WHERE id = ?', [id], (err, row) => {
@@ -120,44 +165,7 @@ export function getEmails(db, limit = 50, offset = 0, years = null, sort = 'desc
     const params = [];
     const conditions = [];
 
-    if (mailboxIds && mailboxIds.length > 0) {
-      conditions.push(`mailbox_id IN (${mailboxIds.map(() => '?').join(',')})`);
-      params.push(...mailboxIds);
-    }
-    if (years && years.length > 0) {
-      const yearClauses = years.map(y => {
-        params.push(new Date(`${y}-01-01`).getTime(), new Date(`${Number(y) + 1}-01-01`).getTime());
-        return '(date >= ? AND date < ?)';
-      });
-      conditions.push(`(${yearClauses.join(' OR ')})`);
-    }
-    if (yearAfter != null) {
-      conditions.push('date >= ?');
-      params.push(new Date(`${yearAfter}-01-01`).getTime());
-    }
-    if (yearBefore != null) {
-      conditions.push('date < ?');
-      params.push(new Date(`${yearBefore}-01-01`).getTime());
-    }
-    if (month) {
-      conditions.push("strftime('%m', date/1000, 'unixepoch') = ?");
-      params.push(String(month).padStart(2, '0'));
-    }
-    if (hasAttachments) {
-      conditions.push('EXISTS (SELECT 1 FROM attachments WHERE emailId = emails.id)');
-    }
-    if (largeAttachment) {
-      conditions.push('EXISTS (SELECT 1 FROM attachments WHERE emailId = emails.id AND size > 1048576)');
-    }
-    const attClause = attachmentTypeClause(attachmentType);
-    if (attClause) conditions.push(attClause);
-    if (hasHtml) conditions.push("bodyHTML IS NOT NULL AND bodyHTML != ''");
-    if (hasSubject) conditions.push("subject IS NOT NULL AND subject != ''");
-    if (fromDomains && fromDomains.length > 0) {
-      const conds = fromDomains.map(() => '`from` LIKE ?').join(' OR ');
-      conditions.push(`(${conds})`);
-      fromDomains.forEach(d => params.push(`%@${d}%`));
-    }
+    buildFilterConditions(params, conditions, { years, yearAfter, yearBefore, month, hasAttachments, largeAttachment, attachmentType, hasHtml, hasSubject, fromDomains, mailboxIds });
 
     let sql = 'SELECT * FROM emails';
     if (conditions.length) sql += ' WHERE ' + conditions.join(' AND ');
@@ -171,50 +179,15 @@ export function getEmails(db, limit = 50, offset = 0, years = null, sort = 'desc
 export function searchEmails(db, query, limit = 50, offset = 0, years = null, sort = 'desc', mailboxIds = null, hasAttachments = false, month = null, hasHtml = false, hasSubject = false, fromDomains = null, attachmentType = null, largeAttachment = false, yearAfter = null, yearBefore = null) {
   return new Promise((resolve, reject) => {
     const order = sort === 'asc' ? 'ASC' : 'DESC';
-    const searchPattern = `%${query}%`;
-    const params = [searchPattern, searchPattern, searchPattern, searchPattern];
+    const ftsQuery = query.replace(/['"]/g, '').replace(/\s+/g, ' ').trim();
+    if (!ftsQuery) return resolve([]);
+
+    const params = [ftsQuery];
     const conditions = [
-      `(subject LIKE ? OR bodyText LIKE ? OR \`from\` LIKE ? OR \`to\` LIKE ?)`
+      'emails.id IN (SELECT rowid FROM emails_fts WHERE emails_fts MATCH ?)'
     ];
 
-    if (mailboxIds && mailboxIds.length > 0) {
-      conditions.push(`mailbox_id IN (${mailboxIds.map(() => '?').join(',')})`);
-      params.push(...mailboxIds);
-    }
-    if (years && years.length > 0) {
-      const yearClauses = years.map(y => {
-        params.push(new Date(`${y}-01-01`).getTime(), new Date(`${Number(y) + 1}-01-01`).getTime());
-        return '(date >= ? AND date < ?)';
-      });
-      conditions.push(`(${yearClauses.join(' OR ')})`);
-    }
-    if (yearAfter != null) {
-      conditions.push('date >= ?');
-      params.push(new Date(`${yearAfter}-01-01`).getTime());
-    }
-    if (yearBefore != null) {
-      conditions.push('date < ?');
-      params.push(new Date(`${yearBefore}-01-01`).getTime());
-    }
-    if (month) {
-      conditions.push("strftime('%m', date/1000, 'unixepoch') = ?");
-      params.push(String(month).padStart(2, '0'));
-    }
-    if (hasAttachments) {
-      conditions.push('EXISTS (SELECT 1 FROM attachments WHERE emailId = emails.id)');
-    }
-    if (largeAttachment) {
-      conditions.push('EXISTS (SELECT 1 FROM attachments WHERE emailId = emails.id AND size > 1048576)');
-    }
-    const attClause = attachmentTypeClause(attachmentType);
-    if (attClause) conditions.push(attClause);
-    if (hasHtml) conditions.push("bodyHTML IS NOT NULL AND bodyHTML != ''");
-    if (hasSubject) conditions.push("subject IS NOT NULL AND subject != ''");
-    if (fromDomains && fromDomains.length > 0) {
-      const conds = fromDomains.map(() => '`from` LIKE ?').join(' OR ');
-      conditions.push(`(${conds})`);
-      fromDomains.forEach(d => params.push(`%@${d}%`));
-    }
+    buildFilterConditions(params, conditions, { years, yearAfter, yearBefore, month, hasAttachments, largeAttachment, attachmentType, hasHtml, hasSubject, fromDomains, mailboxIds });
 
     let sql = 'SELECT * FROM emails WHERE ' + conditions.join(' AND ');
     sql += ` ORDER BY date ${order} LIMIT ? OFFSET ?`;

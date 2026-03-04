@@ -1,11 +1,18 @@
 import session from 'express-session';
 
 const Store = session.Store;
+const CLEANUP_INTERVAL_MS = 15 * 60 * 1000;
 
 export class SqliteStore extends Store {
   constructor(db) {
     super();
     this.db = db;
+    this._cleanupTimer = setInterval(() => this._clearExpired(), CLEANUP_INTERVAL_MS);
+    if (this._cleanupTimer.unref) this._cleanupTimer.unref();
+  }
+
+  _clearExpired() {
+    this.db.run('DELETE FROM sessions WHERE expired <= ?', [Date.now()], () => {});
   }
 
   get(sid, cb) {

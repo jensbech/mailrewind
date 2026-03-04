@@ -50,9 +50,17 @@ describe('Auth', () => {
     });
 
     it('trims and lowercases usernames', () => {
-      const env = { ENABLE_AUTH: 'true', ALLOWED_USERS: ' Alice , BOB ' };
+      const env = { ENABLE_AUTH: 'true', ALLOWED_USERS: ' Alice , BOB ', SESSION_SECRET: 's', GITHUB_CLIENT_ID: 'cid', GITHUB_CLIENT_SECRET: 'csec' };
       const config = createAuthConfig(env);
       assert.deepStrictEqual(config.allowedUsers, ['alice', 'bob']);
+    });
+
+    it('throws when ENABLE_AUTH=true but SESSION_SECRET is missing', () => {
+      assert.throws(() => createAuthConfig({ ENABLE_AUTH: 'true' }), /SESSION_SECRET/);
+    });
+
+    it('throws when ENABLE_AUTH=true but GITHUB_CLIENT_ID is missing', () => {
+      assert.throws(() => createAuthConfig({ ENABLE_AUTH: 'true', SESSION_SECRET: 's' }), /GITHUB_CLIENT_ID/);
     });
   });
 
@@ -144,10 +152,10 @@ describe('Auth', () => {
       assert.ok(res.text.includes('Sign in with GitHub'));
     });
 
-    it('GET /auth/logout destroys session and redirects', async () => {
-      const res = await supertest(app).get('/auth/logout');
-      assert.strictEqual(res.status, 302);
-      assert.strictEqual(res.headers.location, '/auth/login');
+    it('POST /auth/logout destroys session and clears cookie', async () => {
+      const res = await supertest(app).post('/auth/logout');
+      assert.strictEqual(res.status, 200);
+      assert.deepStrictEqual(res.body, { ok: true });
     });
   });
 });
