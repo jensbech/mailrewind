@@ -583,7 +583,7 @@ describe('Server API', () => {
         assert.strictEqual(res.status, 200);
         assert.strictEqual(res.body.length, 2);
         assert.strictEqual(res.body[0].name, 'a.mbox');
-        assert.strictEqual(res.body[0].path, join(resolve(dir), 'a.mbox'));
+        assert.strictEqual(res.body[0].path, undefined);
         assert.strictEqual(res.body[0].size, 10);
         assert.strictEqual(res.body[1].name, 'b.mbox');
       } finally {
@@ -595,6 +595,23 @@ describe('Server API', () => {
       const { app: filesApp } = createApp(db, { filesDir: '/nonexistent/__xyz__' });
       const res = await supertest(filesApp).get('/api/files');
       assert.strictEqual(res.status, 500);
+    });
+
+    it('does not return absolute server paths in file listing', async () => {
+      const dir = 'data/test-files-nopath';
+      await mkdir(dir, { recursive: true });
+      try {
+        await writeFile(join(dir, 'test.mbox'), 'content');
+        const { app: filesApp } = createApp(db, { filesDir: dir });
+        const res = await supertest(filesApp).get('/api/files');
+        assert.strictEqual(res.status, 200);
+        assert.strictEqual(res.body.length, 1);
+        assert.strictEqual(res.body[0].path, undefined);
+        assert.strictEqual(res.body[0].name, 'test.mbox');
+        assert.ok(typeof res.body[0].size === 'number');
+      } finally {
+        await rm(dir, { recursive: true });
+      }
     });
   });
 });

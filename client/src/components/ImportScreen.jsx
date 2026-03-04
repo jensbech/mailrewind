@@ -5,7 +5,7 @@ export default function ImportScreen({ onComplete, existingMailboxes = [], onCan
   const [step, setStep] = useState('name');
   const [mailboxName, setMailboxName] = useState('');
   const [targetMailboxId, setTargetMailboxId] = useState(null);
-  const [mboxPath, setMboxPath] = useState('/data/');
+  const [mboxPath, setMboxPath] = useState('');
   const [logs, setLogs] = useState([]);
   const [progress, setProgress] = useState(null);
   const [skipReasons, setSkipReasons] = useState(null);
@@ -112,7 +112,7 @@ export default function ImportScreen({ onComplete, existingMailboxes = [], onCan
     setImportStatus('idle');
     setLogs([]);
     setProgress(null);
-    setMboxPath('/data/');
+    setMboxPath('');
     fetchFiles();
   }
 
@@ -219,10 +219,10 @@ export default function ImportScreen({ onComplete, existingMailboxes = [], onCan
                     <div className="import-file-list">
                       {files.map(f => (
                         <button
-                          key={f.path}
+                          key={f.name}
                           type="button"
-                          className={`import-file-row${mboxPath === f.path ? ' import-file-row--selected' : ''}`}
-                          onClick={() => setMboxPath(f.path)}
+                          className={`import-file-row${mboxPath === f.name ? ' import-file-row--selected' : ''}`}
+                          onClick={() => setMboxPath(f.name)}
                         >
                           <span className="import-file-name">{f.name}</span>
                           <span className="import-file-size">{formatSize(f.size)}</span>

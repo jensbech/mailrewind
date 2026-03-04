@@ -280,7 +280,7 @@ export function createApp(db, { heartbeatMs = 15000, filesDir = '/data', authCon
         mboxNames.map(async (name) => {
           const filePath = join(resolve(filesDir), name);
           const { size } = await stat(filePath);
-          return { name, path: filePath, size };
+          return { name, size };
         })
       );
       files.sort((a, b) => a.name.localeCompare(b.name));
