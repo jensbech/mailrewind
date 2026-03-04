@@ -571,7 +571,7 @@ describe('Server API', () => {
       }
     });
 
-    it('returns .mbox files sorted by name with correct path and size', async () => {
+    it('returns .mbox files sorted by name with name and size (no path)', async () => {
       const dir = 'data/test-files-scan';
       await mkdir(dir, { recursive: true });
       try {

@@ -278,8 +278,7 @@ export function createApp(db, { heartbeatMs = 15000, filesDir = '/data', authCon
       const mboxNames = entries.filter(f => f.endsWith('.mbox'));
       const files = await Promise.all(
         mboxNames.map(async (name) => {
-          const filePath = join(resolve(filesDir), name);
-          const { size } = await stat(filePath);
+          const { size } = await stat(join(resolve(filesDir), name));
           return { name, size };
         })
       );
