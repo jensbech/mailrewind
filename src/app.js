@@ -55,7 +55,7 @@ export function createApp(db, { heartbeatMs = 15000, filesDir = '/data', authCon
       directives: {
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+        styleSrc: ["'self'", "https://fonts.googleapis.com"],
         fontSrc: ["'self'", "https://fonts.gstatic.com"],
         imgSrc: ["'self'", "data:"],
         connectSrc: ["'self'"],
@@ -92,6 +92,10 @@ export function createApp(db, { heartbeatMs = 15000, filesDir = '/data', authCon
 
   if (authConfig.enabled) {
     app.set('trust proxy', 1);
+    app.use((req, res, next) => {
+      if (!req.headers['x-forwarded-proto'] || req.headers['x-forwarded-proto'] === 'https') return next();
+      res.redirect(301, `https://${req.headers.host}${req.originalUrl}`);
+    });
     app.use(session({
       store: new SqliteStore(db),
       secret: authConfig.sessionSecret,
@@ -102,7 +106,7 @@ export function createApp(db, { heartbeatMs = 15000, filesDir = '/data', authCon
         httpOnly: true,
         secure: 'auto',
         sameSite: 'lax',
-        maxAge: 7 * 24 * 60 * 60 * 1000,
+        maxAge: 24 * 60 * 60 * 1000,
       },
     }));
     app.use('/auth', createAuthRoutes(authConfig));

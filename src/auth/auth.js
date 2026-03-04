@@ -91,6 +91,7 @@ export function createAuthRoutes(config) {
   });
 
   router.get('/github', (req, res) => {
+    console.log('[AUTH] Login attempt initiated');
     const state = crypto.randomBytes(16).toString('hex');
     req.session.oauthState = { value: state, created: Date.now() };
     const params = new URLSearchParams({
@@ -107,9 +108,11 @@ export function createAuthRoutes(config) {
       const { code, state } = req.query;
       const stored = req.session.oauthState;
       if (!code || !state || !stored || state !== stored.value) {
+        console.warn('[AUTH] Invalid or missing OAuth state token');
         return res.redirect('/auth/login');
       }
       if (Date.now() - stored.created > OAUTH_STATE_MAX_AGE_MS) {
+        console.warn('[AUTH] Expired OAuth state token');
         return res.redirect('/auth/login');
       }
       delete req.session.oauthState;
@@ -135,12 +138,14 @@ export function createAuthRoutes(config) {
       const username = (userData.login || '').toLowerCase();
 
       if (!config.allowedUsers.includes(username)) {
+        console.warn(`[AUTH] Access denied for user: ${username}`);
         return res.redirect('/auth/denied');
       }
 
       req.session.regenerate((err) => {
         if (err) return res.redirect('/auth/login');
         req.session.user = { username, avatar: userData.avatar_url };
+        console.log(`[AUTH] Login successful: ${username}`);
         req.session.save(() => res.redirect('/'));
       });
     } catch {
@@ -156,6 +161,8 @@ export function createAuthRoutes(config) {
   });
 
   router.post('/logout', (req, res) => {
+    const username = req.session?.user?.username || 'unknown';
+    console.log(`[AUTH] Logout: ${username}`);
     req.session.destroy(() => {
       res.clearCookie('mailrewind.sid');
       res.json({ ok: true });
