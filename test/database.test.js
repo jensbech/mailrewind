@@ -254,6 +254,17 @@ describe('Database', () => {
     });
   });
 
+  describe('sessions table', () => {
+    it('sessions table exists after initialization', async () => {
+      const row = await new Promise((resolve, reject) => {
+        db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='sessions'", (err, row) => {
+          err ? reject(err) : resolve(row);
+        });
+      });
+      assert.ok(row, 'sessions table should exist');
+    });
+  });
+
   describe('error paths with closed DB', () => {
     let closedDb;
 

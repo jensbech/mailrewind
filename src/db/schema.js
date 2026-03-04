@@ -57,4 +57,12 @@ CREATE TABLE IF NOT EXISTS attachments (
 );
 
 CREATE INDEX IF NOT EXISTS idx_attachment_email ON attachments(emailId);
+
+CREATE TABLE IF NOT EXISTS sessions (
+  sid TEXT PRIMARY KEY,
+  sess TEXT NOT NULL,
+  expired INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_sessions_expired ON sessions(expired);
 `;
