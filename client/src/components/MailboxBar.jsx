@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-export default function MailboxBar({ mailboxes, selectedIds, onSelectionChange, onAddClick, onDeleteMailbox, darkMode, onToggleDark }) {
+export default function MailboxBar({ mailboxes, selectedIds, onSelectionChange, onAddClick, onDeleteMailbox, darkMode, onToggleDark, user }) {
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const allSelected = selectedIds === null;
 
@@ -80,6 +80,11 @@ export default function MailboxBar({ mailboxes, selectedIds, onSelectionChange, 
             )}
             {darkMode ? 'Dark' : 'Light'}
           </button>
+          {user && (
+            <a href="/auth/logout" className="logout-btn" title={`Signed in as ${user.username}`}>
+              {user.username} (sign out)
+            </a>
+          )}
         </div>
       </div>
 

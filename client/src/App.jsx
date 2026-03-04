@@ -30,6 +30,22 @@ function mailboxIdsParam(selectedIds) {
 
 export default function App() {
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    axios.get('/auth/me')
+      .then(res => { if (res.data?.username) setUser(res.data); })
+      .catch(() => {});
+
+    const interceptor = axios.interceptors.response.use(
+      res => res,
+      err => {
+        if (err.response?.status === 401) window.location.href = '/auth/login';
+        return Promise.reject(err);
+      }
+    );
+    return () => axios.interceptors.response.eject(interceptor);
+  }, []);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
@@ -267,6 +283,7 @@ export default function App() {
         onDeleteMailbox={handleDeleteMailbox}
         darkMode={darkMode}
         onToggleDark={() => setDarkMode(d => !d)}
+        user={user}
       />
 
       <div className="app">

@@ -1272,6 +1272,18 @@ body {
   background: var(--accent-dim2);
 }
 
+.logout-btn {
+  font-size: 0.75rem;
+  opacity: 0.6;
+  color: var(--text-2);
+  text-decoration: none;
+  padding: 0 6px;
+  white-space: nowrap;
+}
+.logout-btn:hover {
+  opacity: 1;
+}
+
 /* ── Delete confirmation modal ──────────────────────── */
 
 .mailbox-delete-backdrop {
