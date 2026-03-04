@@ -568,3 +568,38 @@ describe('Server API', () => {
     });
   });
 });
+
+describe('Auth integration', () => {
+  let db;
+
+  before(async () => {
+    try { await unlink('test/test-auth-integration.db'); } catch {}
+    db = await initializeDatabase('test/test-auth-integration.db');
+  });
+
+  after(async () => {
+    db.close();
+    try { await unlink('test/test-auth-integration.db'); } catch {}
+  });
+
+  it('blocks API access when auth is enabled and no session', async () => {
+    const authConfig = {
+      enabled: true,
+      allowedUsers: ['alice'],
+      clientId: 'cid',
+      clientSecret: 'csec',
+      sessionSecret: 'test-secret',
+      baseUrl: 'http://localhost:3001',
+    };
+    const { app } = createApp(db, { authConfig });
+    const res = await supertest(app).get('/api/mailboxes');
+    assert.strictEqual(res.status, 401);
+  });
+
+  it('allows API access when auth is disabled', async () => {
+    const authConfig = { enabled: false };
+    const { app } = createApp(db, { authConfig });
+    const res = await supertest(app).get('/api/mailboxes');
+    assert.strictEqual(res.status, 200);
+  });
+});

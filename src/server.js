@@ -1,11 +1,17 @@
 import { initializeDatabase, createMailbox } from './db/database.js';
 import { createApp } from './app.js';
+import { createAuthConfig } from './auth/auth.js';
 
 const PORT = process.env.PORT || 3001;
 
 async function startup() {
   const db = await initializeDatabase();
-  const { app, runImport } = createApp(db);
+  const authConfig = createAuthConfig();
+  const { app, runImport } = createApp(db, { authConfig });
+
+  if (authConfig.enabled) {
+    console.log(`Auth enabled. Allowed users: ${authConfig.allowedUsers.join(', ')}`);
+  }
 
   if (process.env.MBOX_PATH && process.env.MAILBOX_NAME) {
     const mailbox = await createMailbox(db, process.env.MAILBOX_NAME);

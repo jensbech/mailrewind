@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import session from 'express-session';
 import { readdir, stat } from 'fs/promises';
 import { fileURLToPath } from 'url';
 import { dirname, join, resolve } from 'path';
@@ -9,6 +10,8 @@ import {
 } from './db/database.js';
 import { indexEmails } from './services/indexService.js';
 import { getAttachmentsForEmail, getAttachment } from './db/attachments.js';
+import { SqliteStore } from './auth/sessionStore.js';
+import { requireAuth, createAuthRoutes } from './auth/auth.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -19,10 +22,29 @@ export function parseMailboxIds(query) {
   return ids.length > 0 ? ids : null;
 }
 
-export function createApp(db, { heartbeatMs = 15000, filesDir = '/data' } = {}) {
+export function createApp(db, { heartbeatMs = 15000, filesDir = '/data', authConfig = {} } = {}) {
   const app = express();
   app.use(cors());
   app.use(express.json());
+
+  if (authConfig.enabled) {
+    app.set('trust proxy', 1);
+    app.use(session({
+      store: new SqliteStore(db),
+      secret: authConfig.sessionSecret,
+      resave: false,
+      saveUninitialized: false,
+      name: 'mailrewind.sid',
+      cookie: {
+        httpOnly: true,
+        secure: 'auto',
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      },
+    }));
+    app.use('/auth', createAuthRoutes(authConfig));
+    app.use(requireAuth(authConfig));
+  }
 
   const importState = {
     status: 'idle',
@@ -263,7 +285,7 @@ export function createApp(db, { heartbeatMs = 15000, filesDir = '/data' } = {}) 
 
   app.use(express.static(resolve(__dirname, '../client/dist')));
 
-  app.get('*', (req, res) => {
+  app.get('{*path}', (req, res) => {
     res.sendFile(resolve(__dirname, '../client/dist/index.html'));
   });
 
