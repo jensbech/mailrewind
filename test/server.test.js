@@ -182,7 +182,10 @@ describe('Server API', () => {
     });
 
     it('returns 400 when mailboxId is missing', async () => {
-      const res = await supertest(app).post('/api/import/start').send({ path: '/some/file.mbox' });
+      const { app: validPathApp } = createApp(db, { filesDir: resolve('test') });
+      const res = await supertest(validPathApp)
+        .post('/api/import/start')
+        .send({ path: resolve('test/sample.mbox') });
       assert.strictEqual(res.status, 400);
       assert.strictEqual(res.body.error, 'mailboxId required');
     });
@@ -201,6 +204,15 @@ describe('Server API', () => {
       const res = await supertest(secApp)
         .post('/api/import/start')
         .send({ path: resolve('test/../package.json'), mailboxId: mailboxId });
+      assert.strictEqual(res.status, 400);
+      assert.match(res.body.error, /invalid path/i);
+    });
+
+    it('returns 400 when relative path traverses outside filesDir', async () => {
+      const { app: secApp } = createApp(db, { filesDir: resolve('test') });
+      const res = await supertest(secApp)
+        .post('/api/import/start')
+        .send({ path: '../package.json', mailboxId: mailboxId });
       assert.strictEqual(res.status, 400);
       assert.match(res.body.error, /invalid path/i);
     });
