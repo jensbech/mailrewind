@@ -3,7 +3,7 @@ import cors from 'cors';
 import session from 'express-session';
 import { readdir, stat } from 'fs/promises';
 import { fileURLToPath } from 'url';
-import { dirname, join, resolve } from 'path';
+import { dirname, join, resolve, sep } from 'path';
 import {
   getEmails, searchEmails, getEmail, getStats, getYearCounts,
   createMailbox, getMailboxes, deleteMailbox, getTopDomains
@@ -140,7 +140,14 @@ export function createApp(db, { heartbeatMs = 15000, filesDir = '/data', authCon
     if (!mboxPath) return res.status(400).json({ error: 'path required' });
     if (!mailboxId) return res.status(400).json({ error: 'mailboxId required' });
 
-    runImport(mboxPath, mailboxId);
+    const safeDir = resolve(filesDir) + sep;
+    const candidatePath = mboxPath.startsWith('/') ? mboxPath : join(resolve(filesDir), mboxPath);
+    const requestedPath = resolve(candidatePath);
+    if (!requestedPath.startsWith(safeDir)) {
+      return res.status(400).json({ error: 'Invalid path' });
+    }
+
+    runImport(requestedPath, mailboxId);
     res.status(202).json({ ok: true });
   });
 

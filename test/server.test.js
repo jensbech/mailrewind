@@ -187,12 +187,30 @@ describe('Server API', () => {
       assert.strictEqual(res.body.error, 'mailboxId required');
     });
 
+    it('returns 400 when path is outside filesDir', async () => {
+      const { app: secApp } = createApp(db, { filesDir: resolve('test') });
+      const res = await supertest(secApp)
+        .post('/api/import/start')
+        .send({ path: '/etc/passwd', mailboxId: mailboxId });
+      assert.strictEqual(res.status, 400);
+      assert.match(res.body.error, /invalid path/i);
+    });
+
+    it('returns 400 when path traverses outside filesDir', async () => {
+      const { app: secApp } = createApp(db, { filesDir: resolve('test') });
+      const res = await supertest(secApp)
+        .post('/api/import/start')
+        .send({ path: resolve('test/../package.json'), mailboxId: mailboxId });
+      assert.strictEqual(res.status, 400);
+      assert.match(res.body.error, /invalid path/i);
+    });
+
     it('starts an import and returns 202, completing with done status', async () => {
-      const { app: importApp } = createApp(db);
+      const { app: importApp } = createApp(db, { filesDir: resolve('test') });
       const mb = await createMailbox(db, 'Import Start Test');
       const res = await supertest(importApp)
         .post('/api/import/start')
-        .send({ path: 'test/sample.mbox', mailboxId: mb.id });
+        .send({ path: resolve('test/sample.mbox'), mailboxId: mb.id });
       assert.strictEqual(res.status, 202);
       assert.strictEqual(res.body.ok, true);
       const status = await waitForImportDone(importApp);
@@ -209,21 +227,21 @@ describe('Server API', () => {
     });
 
     it('tracks progress events during batch import (covers runImport progress handler)', async () => {
-      const { app: progressApp } = createApp(db);
+      const { app: progressApp } = createApp(db, { filesDir: resolve('test') });
       const mb = await createMailbox(db, 'Progress Test');
       await supertest(progressApp)
         .post('/api/import/start')
-        .send({ path: 'test/fixtures/batch25.mbox', mailboxId: mb.id });
+        .send({ path: resolve('test/fixtures/batch25.mbox'), mailboxId: mb.id });
       const status = await waitForImportDone(progressApp);
       assert.strictEqual(status.status, 'done');
       assert.strictEqual(status.seen, 25);
     });
 
     it('sets error status when import fails (covers runImport catch handler)', async () => {
-      const { app: errImportApp } = createApp(brokenDb);
+      const { app: errImportApp } = createApp(brokenDb, { filesDir: resolve('test') });
       await supertest(errImportApp)
         .post('/api/import/start')
-        .send({ path: 'test/sample.mbox', mailboxId: 1 });
+        .send({ path: resolve('test/sample.mbox'), mailboxId: 1 });
       const status = await waitForImportDone(errImportApp);
       assert.strictEqual(status.status, 'error');
       assert.ok(status.error);
