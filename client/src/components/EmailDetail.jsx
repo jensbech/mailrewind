@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import DOMPurify from 'dompurify';
 
 function fileIcon(contentType) {
   if (!contentType) return '📎';
@@ -80,7 +81,7 @@ export default function EmailDetail({ email }) {
 
       <div className="detail-body">
         {email.bodyHTML ? (
-          <div className="body-html" dangerouslySetInnerHTML={{ __html: email.bodyHTML }} />
+          <div className="body-html" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(email.bodyHTML) }} />
         ) : (
           <pre className="body-plain">{email.bodyText || '(no body)'}</pre>
         )}
