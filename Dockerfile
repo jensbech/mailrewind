@@ -1,11 +1,11 @@
-FROM node:20-alpine AS client-build
+FROM node:22-alpine AS client-build
 WORKDIR /app/client
 COPY client/package*.json ./
 RUN npm install
 COPY client/ ./
 RUN npm run build
 
-FROM node:20-alpine
+FROM node:22-alpine
 RUN apk add --no-cache python3 make g++
 WORKDIR /app
 COPY package*.json ./
