@@ -1,5 +1,5 @@
 import express from 'express';
-import cors from 'cors';
+import helmet from 'helmet';
 import session from 'express-session';
 import { readdir, stat } from 'fs/promises';
 import { fileURLToPath } from 'url';
@@ -24,7 +24,7 @@ export function parseMailboxIds(query) {
 
 export function createApp(db, { heartbeatMs = 15000, filesDir = '/data', authConfig = {} } = {}) {
   const app = express();
-  app.use(cors());
+  app.use(helmet({ contentSecurityPolicy: false }));
   app.use(express.json());
 
   if (authConfig.enabled) {

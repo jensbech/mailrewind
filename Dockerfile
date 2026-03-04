@@ -12,5 +12,7 @@ COPY package*.json ./
 RUN npm install --omit=dev
 COPY src/ ./src/
 COPY --from=client-build /app/client/dist ./client/dist
+RUN chown -R node:node /app
+USER node
 EXPOSE 3001
 CMD ["node", "src/server.js"]

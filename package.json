@@ -10,7 +10,6 @@
     "test:coverage": "node --experimental-test-coverage --test 'test/*.test.js'"
   },
   "dependencies": {
-    "cors": "^2.8.5",
     "express": "^5.2.1",
     "express-session": "^1.19.0",
     "helmet": "^8.1.0",

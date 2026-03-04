@@ -11,6 +11,8 @@ async function startup() {
 
   if (authConfig.enabled) {
     console.log(`Auth enabled. Allowed users: ${authConfig.allowedUsers.join(', ')}`);
+  } else {
+    console.warn('WARNING: Authentication is disabled (ENABLE_AUTH != true). All data is publicly accessible.');
   }
 
   if (process.env.MBOX_PATH && process.env.MAILBOX_NAME) {

@@ -12,7 +12,16 @@ export function createAuthConfig(env = process.env) {
     allowedUsers,
     clientId: env.GITHUB_CLIENT_ID || '',
     clientSecret: env.GITHUB_CLIENT_SECRET || '',
-    sessionSecret: env.SESSION_SECRET || crypto.randomBytes(32).toString('hex'),
+    sessionSecret: (() => {
+      if (enabled && !env.SESSION_SECRET) {
+        console.warn(
+          'WARNING: ENABLE_AUTH=true but SESSION_SECRET is not set. ' +
+          'Sessions will be invalidated on every restart. ' +
+          'Set SESSION_SECRET to a stable random value.'
+        );
+      }
+      return env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
+    })(),
     baseUrl: env.BASE_URL || 'http://localhost:3001',
   };
 }
