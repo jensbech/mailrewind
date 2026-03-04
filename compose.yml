@@ -1,14 +1,13 @@
 services:
   app:
     build: .
+    container_name: mailrewind
+    restart: unless-stopped
     ports:
       - "3001:3001"
     volumes:
       - ${MBOX_DIR:-~/Downloads}:/data
-      - email-db:/app/data
-    environment:
-      - MBOX_PATH=${MBOX_PATH:-}
-      - MAILBOX_NAME=${MAILBOX_NAME:-}
+      - mailrewind-db:/app/data
 
 volumes:
-  email-db:
+  mailrewind-db:
